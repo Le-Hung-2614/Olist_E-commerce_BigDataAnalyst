@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h2 class="page-title">Phân Tích Địa Lý</h2>
+  <p class="page-subtitle">Phân bố doanh thu, đơn hàng theo vùng miền và thời gian</p>
+</div>
+
+<div class="charts-grid-2">
+  <div class="card card-chart animate-in" style="--delay:.1s">
+    <div class="card-header">
+      <h3>🗺️ Top 10 Bang Theo Doanh Thu</h3>
+    </div>
+    <div class="card-body chart-container">
+      <canvas id="stateRevenueBar"></canvas>
+    </div>
+  </div>
+  <div class="card card-chart animate-in" style="--delay:.25s">
+    <div class="card-header">
+      <h3>💳 Phương Thức Thanh Toán</h3>
+    </div>
+    <div class="card-body chart-container chart-container-sq">
+      <canvas id="paymentPie"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="card animate-in" style="--delay:.4s">
+  <div class="card-header">
+    <h3>🔥 Bản Đồ Nhiệt — Đơn Hàng Theo Giờ × Ngày</h3>
+  </div>
+  <div class="card-body">
+    <div class="table-container">
+      <table class="heatmap-table" id="heatmapTable">
+        <thead>
+          <tr>
+            <th>Giờ</th>
+            <th>T2</th><th>T3</th><th>T4</th><th>T5</th><th>T6</th><th>T7</th><th>CN</th>
+          </tr>
+        </thead>
+        <tbody id="heatmapBody">
+          <tr><td colspan="8" class="loading-cell">Đang tải dữ liệu...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

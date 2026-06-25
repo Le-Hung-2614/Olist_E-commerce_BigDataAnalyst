@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h2 class="page-title">Phân Tích Sản Phẩm</h2>
+  <p class="page-subtitle">Thống kê sản phẩm, danh mục và đánh giá</p>
+</div>
+
+<div class="charts-grid-2">
+  <div class="card card-chart animate-in" style="--delay:.1s">
+    <div class="card-header">
+      <h3>🏷️ Top 10 Danh Mục Theo Doanh Số</h3>
+    </div>
+    <div class="card-body chart-container chart-container-tall">
+      <canvas id="topProductsBar"></canvas>
+    </div>
+  </div>
+  <div class="card card-chart animate-in" style="--delay:.25s">
+    <div class="card-header">
+      <h3>🕸️ So Sánh Top 5 Danh Mục</h3>
+    </div>
+    <div class="card-body chart-container chart-container-sq">
+      <canvas id="categoryRadar"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="card card-chart animate-in" style="--delay:.4s">
+  <div class="card-header">
+    <h3>💲 Giá vs Đánh Giá Trung Bình</h3>
+  </div>
+  <div class="card-body chart-container">
+    <canvas id="priceReviewScatter"></canvas>
+  </div>
+</div>
+{% endblock %}

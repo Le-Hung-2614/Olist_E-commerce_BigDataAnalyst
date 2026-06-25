@@ -1,0 +1,5 @@
+# Python dependencies
+pyspark==3.5.1
+pymongo==4.7.0
+flask==3.0.3
+python-dotenv==1.0.0

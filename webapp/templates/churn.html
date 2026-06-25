@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h2 class="page-title">Phân Tích Rời Bỏ Khách Hàng</h2>
+  <p class="page-subtitle">Dự đoán và phân tích tỷ lệ khách hàng rời bỏ (Churn)</p>
+</div>
+
+<!-- Churn Rate Gauge + Summary -->
+<div class="kpi-grid kpi-grid-3">
+  <div class="kpi-card kpi-red animate-in" style="--delay:.05s">
+    <div class="kpi-icon">📉</div>
+    <div class="kpi-info">
+      <span class="kpi-label">Tỷ Lệ Churn</span>
+      <span class="kpi-value" id="churnRate">—</span>
+    </div>
+    <div class="kpi-decoration"></div>
+  </div>
+  <div class="kpi-card kpi-orange animate-in" style="--delay:.15s">
+    <div class="kpi-icon">👤</div>
+    <div class="kpi-info">
+      <span class="kpi-label">Tổng Khách Hàng</span>
+      <span class="kpi-value" id="churnTotal">—</span>
+    </div>
+    <div class="kpi-decoration"></div>
+  </div>
+  <div class="kpi-card kpi-purple animate-in" style="--delay:.25s">
+    <div class="kpi-icon">⚠️</div>
+    <div class="kpi-info">
+      <span class="kpi-label">Đã Rời Bỏ</span>
+      <span class="kpi-value" id="churnCount">—</span>
+    </div>
+    <div class="kpi-decoration"></div>
+  </div>
+</div>
+
+<!-- Gauge visual -->
+<div class="card animate-in" style="--delay:.3s">
+  <div class="card-body" style="text-align:center; padding:2rem;">
+    <div class="gauge-container" id="gaugeContainer">
+      <div class="gauge">
+        <div class="gauge-fill" id="gaugeFill"></div>
+        <div class="gauge-cover">
+          <span class="gauge-value" id="gaugeValue">0%</span>
+          <span class="gauge-label">Tỷ lệ Churn</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="charts-grid-2">
+  <div class="card card-chart animate-in" style="--delay:.35s">
+    <div class="card-header">
+      <h3>📊 Tỷ Lệ Churn Theo Phân Khúc</h3>
+    </div>
+    <div class="card-body chart-container">
+      <canvas id="churnBySegment"></canvas>
+    </div>
+  </div>
+  <div class="card card-chart animate-in" style="--delay:.45s">
+    <div class="card-header">
+      <h3>🏆 So Sánh Mô Hình</h3>
+    </div>
+    <div class="card-body chart-container">
+      <canvas id="modelCompare"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="card animate-in" style="--delay:.55s">
+  <div class="card-header">
+    <h3>🚨 Top 10 Khách Hàng Có Nguy Cơ Rời Bỏ Cao</h3>
+  </div>
+  <div class="card-body">
+    <div class="table-container">
+      <table class="data-table" id="highRiskTable">
+        <thead>
+          <tr>
+            <th>Mã KH</th>
+            <th>Phân Khúc</th>
+            <th>Thành Phố</th>
+            <th>Bang</th>
+            <th>Xác Suất Rời Bỏ</th>
+            <th>Monetary</th>
+            <th>Recency</th>
+          </tr>
+        </thead>
+        <tbody id="highRiskBody">
+          <tr><td colspan="7" class="loading-cell">Đang tải dữ liệu...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

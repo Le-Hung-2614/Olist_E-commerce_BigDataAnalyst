@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h2 class="page-title">Phân Khúc Khách Hàng</h2>
+  <p class="page-subtitle">Phân tích RFM — Recency, Frequency, Monetary</p>
+</div>
+
+<div class="charts-grid-2">
+  <div class="card card-chart animate-in" style="--delay:.1s">
+    <div class="card-header">
+      <h3>🍩 Phân Bố Phân Khúc</h3>
+    </div>
+    <div class="card-body chart-container chart-container-sq">
+      <canvas id="segmentDoughnut"></canvas>
+    </div>
+  </div>
+  <div class="card card-chart animate-in" style="--delay:.25s">
+    <div class="card-header">
+      <h3>🔬 Recency vs Monetary theo Phân Khúc</h3>
+    </div>
+    <div class="card-body chart-container">
+      <canvas id="rfmScatter"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="card animate-in" style="--delay:.4s">
+  <div class="card-header">
+    <h3>👑 Top Khách Hàng Theo Phân Khúc</h3>
+  </div>
+  <div class="card-body">
+    <div class="table-container">
+      <table class="data-table" id="segmentTable">
+        <thead>
+          <tr>
+            <th>Mã KH</th>
+            <th>Phân Khúc</th>
+            <th>Thành Phố</th>
+            <th>Bang</th>
+            <th>Recency</th>
+            <th>Frequency</th>
+            <th>Monetary (R$)</th>
+          </tr>
+        </thead>
+        <tbody id="segmentTableBody">
+          <tr><td colspan="7" class="loading-cell">Đang tải dữ liệu...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

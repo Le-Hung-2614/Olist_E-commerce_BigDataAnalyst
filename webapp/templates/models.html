@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h2 class="page-title">Hiệu Suất Mô Hình ML</h2>
+  <p class="page-subtitle">Đánh giá và so sánh các mô hình Machine Learning</p>
+</div>
+
+<div class="charts-grid-2">
+  <div class="card animate-in" style="--delay:.1s">
+    <div class="card-header">
+      <h3>🎯 Ma Trận Nhầm Lẫn — Random Forest</h3>
+    </div>
+    <div class="card-body">
+      <div class="confusion-matrix" id="confusionMatrix">
+        <table class="cm-table">
+          <thead>
+            <tr><th></th><th>Dự đoán: Không</th><th>Dự đoán: Có</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th>Thực tế: Không</th>
+              <td class="cm-tn" id="cmTN">—</td>
+              <td class="cm-fp" id="cmFP">—</td>
+            </tr>
+            <tr>
+              <th>Thực tế: Có</th>
+              <td class="cm-fn" id="cmFN">—</td>
+              <td class="cm-tp" id="cmTP">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="card card-chart animate-in" style="--delay:.25s">
+    <div class="card-header">
+      <h3>📊 Tầm Quan Trọng Đặc Trưng</h3>
+    </div>
+    <div class="card-body chart-container">
+      <canvas id="featureImportance"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="card animate-in" style="--delay:.4s">
+  <div class="card-header">
+    <h3>📋 So Sánh Chỉ Số Mô Hình</h3>
+  </div>
+  <div class="card-body">
+    <div class="table-container">
+      <table class="data-table" id="metricsTable">
+        <thead>
+          <tr>
+            <th>Mô Hình</th>
+            <th>Accuracy</th>
+            <th>Precision</th>
+            <th>Recall</th>
+            <th>F1-Score</th>
+            <th>AUC</th>
+            <th>RMSE</th>
+          </tr>
+        </thead>
+        <tbody id="metricsBody">
+          <tr><td colspan="7" class="loading-cell">Đang tải dữ liệu...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Prediction Form -->
+<div class="card animate-in" style="--delay:.55s">
+  <div class="card-header">
+    <h3>🔮 Dự Đoán Churn — Nhập Thông Tin Khách Hàng</h3>
+  </div>
+  <div class="card-body">
+    <form id="predictForm" class="predict-form">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="inp_recency">Recency (ngày)</label>
+          <input type="number" id="inp_recency" name="recency" value="30" min="0" max="999" step="1" />
+          <span class="form-hint">Số ngày kể từ đơn hàng cuối</span>
+        </div>
+        <div class="form-group">
+          <label for="inp_frequency">Frequency</label>
+          <input type="number" id="inp_frequency" name="frequency" value="3" min="1" max="100" step="1" />
+          <span class="form-hint">Số lượng đơn hàng</span>
+        </div>
+        <div class="form-group">
+          <label for="inp_monetary">Monetary (R$)</label>
+          <input type="number" id="inp_monetary" name="monetary" value="250" min="0" max="99999" step="0.01" />
+          <span class="form-hint">Tổng giá trị mua hàng</span>
+        </div>
+        <div class="form-group">
+          <label for="inp_review">Điểm đánh giá</label>
+          <input type="number" id="inp_review" name="review_score" value="4" min="1" max="5" step="0.1" />
+          <span class="form-hint">Điểm review trung bình (1-5)</span>
+        </div>
+        <div class="form-group">
+          <label for="inp_delivery">Ngày giao hàng</label>
+          <input type="number" id="inp_delivery" name="delivery_days" value="10" min="0" max="120" step="1" />
+          <span class="form-hint">Số ngày giao hàng trung bình</span>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-predict">
+        <span class="btn-icon">🚀</span> Dự Đoán
+      </button>
+    </form>
+
+    <!-- Result -->
+    <div id="predictResult" class="predict-result hidden">
+      <div class="result-header">
+        <span class="result-icon" id="resultIcon">—</span>
+        <h4 id="resultLabel">—</h4>
+      </div>
+      <div class="result-details">
+        <div class="result-item">
+          <span class="result-key">Xác suất rời bỏ</span>
+          <span class="result-val" id="resultProb">—</span>
+        </div>
+        <div class="result-item">
+          <span class="result-key">Mức độ rủi ro</span>
+          <span class="result-val" id="resultRisk">—</span>
+        </div>
+      </div>
+      <div class="result-bar-container">
+        <div class="result-bar" id="resultBar"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
