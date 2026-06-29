@@ -23,9 +23,6 @@ import json
 import logging
 from datetime import datetime
 
-# ==========================================================================
-# Buoc PySpark dung Python 3.12 (Python 3.13 khong tuong thich)
-# ==========================================================================
 PYTHON_PATH = "C:/Users/Admin/AppData/Local/Programs/Python/Python312/python.exe"
 os.environ["PYSPARK_PYTHON"] = PYTHON_PATH
 os.environ["PYSPARK_DRIVER_PYTHON"] = PYTHON_PATH
@@ -67,7 +64,7 @@ HDFS_MODELS = "hdfs://localhost:9000/user/bigdata/olist/models"
 
 
 # ==========================================================================
-# Tao SparkSession - toi uu cho may yeu + tranh loi socket Windows
+# Tao SparkSession 
 # ==========================================================================
 def create_spark_session():
     """

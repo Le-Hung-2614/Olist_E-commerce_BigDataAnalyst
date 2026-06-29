@@ -16,11 +16,7 @@ import sys
 import os
 from datetime import datetime
 
-# Set PYSPARK_PYTHON bằng FULL PATH, dùng Python 3.13 (đã xác nhận có đủ
-# pyspark + pandas + pyarrow trên máy này - Python 3.12 trước đó THIẾU cả
-# pandas lẫn pyarrow, là nguyên nhân khiến worker chết giữa chừng khi ghi
-# parquet, để lại thư mục HDFS rỗng 0B dù không báo lỗi rõ ràng).
-PYTHON_PATH = "C:/Users/Admin/AppData/Local/Programs/Python/Python313/python.exe"
+PYTHON_PATH = "C:/Users/Admin/AppData/Local/Programs/Python/Python312/python.exe"
 os.environ["PYSPARK_PYTHON"] = PYTHON_PATH
 os.environ["PYSPARK_DRIVER_PYTHON"] = PYTHON_PATH
 os.environ["SPARK_LOCAL_IP"] = "127.0.0.1"
@@ -89,7 +85,7 @@ def create_spark_session():
 
 
 # ============================================================================
-# BƯỚC 1: Đọc dữ liệu từ HDFS
+# Đọc dữ liệu từ HDFS
 # ============================================================================
 
 def load_raw_data(spark):
@@ -139,7 +135,7 @@ def load_raw_data(spark):
 
 
 # ============================================================================
-# BƯỚC 2: Join tất cả bảng thành merged_orders
+# Join tất cả bảng thành merged_orders
 # ============================================================================
 
 def join_tables(dataframes):
@@ -270,7 +266,7 @@ def join_tables(dataframes):
 
 
 # ============================================================================
-# BƯỚC 3: Làm sạch dữ liệu
+# Làm sạch dữ liệu
 # ============================================================================
 
 def clean_data(df):
@@ -370,7 +366,7 @@ def clean_data(df):
 
 
 # ============================================================================
-# BƯỚC 4: Feature Engineering
+# Feature Engineering
 # ============================================================================
 
 def engineer_features(df):
@@ -469,7 +465,7 @@ def engineer_features(df):
 
 
 # ============================================================================
-# BƯỚC 5: Tính RFM (Recency, Frequency, Monetary) cho từng khách hàng
+# Tính RFM (Recency, Frequency, Monetary) cho từng khách hàng
 # ============================================================================
 
 def calculate_rfm(df, spark):
@@ -566,7 +562,7 @@ def calculate_rfm(df, spark):
 
 
 # ============================================================================
-# BƯỚC 6: Tạo nhãn Churn (khách hàng rời bỏ)
+# Tạo nhãn Churn (khách hàng rời bỏ)
 # ============================================================================
 
 def create_churn_label(df):
@@ -609,7 +605,7 @@ def create_churn_label(df):
 
 
 # ============================================================================
-# BƯỚC 7: Lưu dữ liệu đã xử lý lên HDFS
+# Lưu dữ liệu đã xử lý lên HDFS
 # ============================================================================
 
 def _verify_hdfs_write(spark, hdfs_path, label):

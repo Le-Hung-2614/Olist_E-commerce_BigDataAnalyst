@@ -32,7 +32,7 @@ olist-bigdata-project/
 - MongoDB 7.0+ (Community Server)
 - `winutils.exe` (cho Windows)
 
-## 🚀 Hướng Dẫn Cài Đặt
+## Hướng Dẫn Cài Đặt
 
 ### 1. Cài đặt dependencies Python
 
@@ -91,7 +91,7 @@ cd C:\olist-bigdata-project\webapp
 python app.py
 ```
 
-Mở browser → http://localhost:5000
+Mở browser → http://127.0.0.1:5000/
 
 ## Dataset
 
