@@ -1,5 +1,5 @@
-# Đồ Án Big Data: Phân Tích E-Commerce Olist
-# Pipeline: CSV → HDFS → PySpark (ETL + ML) → MongoDB → Flask + Chart.js
+# Đồ Án Big Data: Ứng dụng big data trong phân tích hành vi khách hàng sử dụng dữ liệu E-Commerce Olist (Kaggle)
+# Pipeline: CSV(Kaggle) → HDFS → PySpark (ETL + ML) → MongoDB → Flask + Chart.js
 
 ## Mô Tả Dự Án
 
@@ -32,7 +32,7 @@ olist-bigdata-project/
 - MongoDB 7.0+ (Community Server)
 - `winutils.exe` (cho Windows)
 
-## 🚀 Hướng Dẫn Cài Đặt
+## Hướng Dẫn Cài Đặt
 
 ### 1. Cài đặt dependencies Python
 
@@ -91,9 +91,9 @@ cd C:\olist-bigdata-project\webapp
 python app.py
 ```
 
-Mở browser → http://localhost:5000
+Mở browser → http://127.0.0.1:5000/
 
-## 📊 Dataset
+## Dataset
 
 **Brazilian E-Commerce Public Dataset by Olist** (~100K đơn hàng, 2016–2018)
 
@@ -109,7 +109,7 @@ Mở browser → http://localhost:5000
 | olist_geolocation_dataset.csv | ~1M | Vị trí địa lý |
 | product_category_name_translation.csv | ~71 | Dịch danh mục |
 
-## 🤖 ML Models
+## ML Models
 
 1. **Customer Segmentation** (K-Means) — Phân nhóm khách hàng theo RFM
 2. **Churn Prediction** (Random Forest + Logistic Regression) — Dự đoán khách hàng rời bỏ
