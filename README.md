@@ -1,5 +1,5 @@
-# Đồ Án Big Data: Phân Tích E-Commerce Olist
-# Pipeline: CSV → HDFS → PySpark (ETL + ML) → MongoDB → Flask + Chart.js
+# Đồ Án Big Data: Ứng dụng big data trong phân tích hành vi khách hàng sử dụng dữ liệu E-Commerce Olist (Kaggle)
+# Pipeline: CSV(Kaggle) → HDFS → PySpark (ETL + ML) → MongoDB → Flask + Chart.js
 
 ## Mô Tả Dự Án
 
