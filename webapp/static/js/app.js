@@ -251,8 +251,8 @@
             <td>${c.city || '—'}</td>
             <td>${c.state || '—'}</td>
             <td><span class="prob-badge ${pb.cls}">${pb.text}</span></td>
-            <td>${c.rfm ? Number(c.rfm.monetary).toLocaleString('pt-BR', {maximumFractionDigits:0}) : '—'}</td>
-            <td>${c.rfm ? c.rfm.recency : '—'}</td>
+            <td>${c.monetary != null ? Number(c.monetary).toLocaleString('pt-BR', {maximumFractionDigits:0}) : '—'}</td>
+            <td>${c.recency != null ? c.recency : '—'}</td>
           </tr>`;
       }).join('');
     }
@@ -433,7 +433,8 @@
     if (!data || !data.models) return;
 
     const models = data.models;
-    const rf = models[0];
+    const rf = models.find(m => m.confusion_matrix) || models[0];
+    const fiModel = models.find(m => m.feature_importance?.length) || rf;
 
     // Confusion Matrix (RF)
     if (rf.confusion_matrix) {
@@ -462,17 +463,18 @@
     // Metrics table
     const tbody = document.getElementById('metricsBody');
     if (tbody) {
+      const fmt = (v) => (v == null || isNaN(v)) ? '—' : (v * 100).toFixed(1) + '%';
       tbody.innerHTML = models.map(m => `
         <tr>
-          <td style="color:var(--text-bright);font-weight:600;font-family:inherit">${m.name}</td>
-          <td>${(m.accuracy * 100).toFixed(1)}%</td>
-          <td>${(m.precision * 100).toFixed(1)}%</td>
-          <td>${(m.recall * 100).toFixed(1)}%</td>
-          <td>${(m.f1 * 100).toFixed(1)}%</td>
-          <td>${(m.auc * 100).toFixed(1)}%</td>
+          <td style="color:var(--text-bright);font-weight:600">${m.name || '—'}</td>
+          <td>${fmt(m.accuracy)}</td>
+          <td>${fmt(m.precision)}</td>
+          <td>${fmt(m.recall)}</td>
+          <td>${fmt(m.f1)}</td>
+          <td>${fmt(m.auc)}</td>
           <td>${m.rmse != null ? m.rmse.toFixed(3) : '—'}</td>
         </tr>
-      `).join('');
+      `).join('')
     }
 
     // Prediction form

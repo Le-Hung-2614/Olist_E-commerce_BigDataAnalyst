@@ -19,8 +19,8 @@ import subprocess
 import pandas as pd
 from datetime import datetime
 
-# Set PYSPARK_PYTHON bằng FULL PATH, dùng Python 3.13
-PYTHON_PATH = "C:/Users/Admin/AppData/Local/Programs/Python/Python313/python.exe"
+
+PYTHON_PATH = "C:/Users/Admin/AppData/Local/Programs/Python/Python312/python.exe"
 os.environ["PYSPARK_PYTHON"] = PYTHON_PATH
 os.environ["PYSPARK_DRIVER_PYTHON"] = PYTHON_PATH
 os.environ["SPARK_LOCAL_IP"] = "127.0.0.1"

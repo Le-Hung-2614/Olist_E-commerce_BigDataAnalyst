@@ -18,9 +18,9 @@ from datetime import datetime
 import pandas as pd
 from pymongo import MongoClient
 
-# Set PYSPARK_PYTHON bằng FULL PATH, dùng Python 3.13 (đã xác nhận có đủ
+# Set PYSPARK_PYTHON bằng FULL PATH, dùng Python 3.12 (đã xác nhận có đủ
 # pyspark + pandas + pyarrow trên máy này).
-PYTHON_PATH = "C:/Users/Admin/AppData/Local/Programs/Python/Python313/python.exe"
+PYTHON_PATH = "C:/Users/Admin/AppData/Local/Programs/Python/Python312/python.exe"
 os.environ["PYSPARK_PYTHON"] = PYTHON_PATH
 os.environ["PYSPARK_DRIVER_PYTHON"] = PYTHON_PATH
 os.environ["SPARK_LOCAL_IP"] = "127.0.0.1"
@@ -34,6 +34,13 @@ from pyspark.sql.window import Window
 # ============================================================================
 # Cấu hình
 # ============================================================================
+# Fix Unicode cho Windows console (cp1252 khong ho tro tieng Viet)
+import io
+if hasattr(sys.stdout, 'buffer'):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+if hasattr(sys.stderr, 'buffer'):
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -389,23 +396,14 @@ def export_customers(data):
         )
 
     # Join với churn_predictions (nếu có)
+    # ml_models.py đã lưu churn_probability dạng float (không phải vector)
     if data["churn_predictions"] is not None:
         churn = data["churn_predictions"].select(
             "customer_unique_id",
             F.col("prediction").alias("churn_prediction"),
-            F.col("probability").alias("churn_probability_vector"),
+            F.col("churn_probability"),
         )
         customer_doc = customer_doc.join(churn, on="customer_unique_id", how="left")
-
-        # Trích xuất xác suất churn từ probability vector
-        # probability vector: [prob_class_0, prob_class_1]
-        customer_doc = customer_doc.withColumn(
-            "churn_probability",
-            F.when(
-                F.col("churn_probability_vector").isNotNull(),
-                F.element_at(F.col("churn_probability_vector"), 2)  # Xác suất class 1
-            ).otherwise(F.lit(None))
-        ).drop("churn_probability_vector")
     else:
         customer_doc = (
             customer_doc
@@ -727,6 +725,9 @@ def export_aggregations(data, spark, ml_results=None):
     if ml_results:
         perf_rows = []
         for model_key, model_data in ml_results.items():
+            # Bo qua cac key khong phai model (timestamp, duration_seconds, ...)
+            if not isinstance(model_data, dict):
+                continue
             perf_rows.append({
                 "model_name": model_data.get("model_name", model_key),
                 "best_model": model_data.get("best_model", "N/A"),
@@ -758,7 +759,6 @@ def export_aggregations(data, spark, ml_results=None):
                 F.avg("recency").alias("avg_recency"),
                 F.avg("frequency").alias("avg_frequency"),
                 F.avg("monetary").alias("avg_monetary"),
-                F.avg("avg_review_score").alias("avg_review_score"),
             )
             .withColumn("agg_type", F.lit("segment_stats"))
             .orderBy(F.col("avg_monetary").desc())

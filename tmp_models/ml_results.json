@@ -2,152 +2,102 @@
   "kmeans_segmentation": {
     "model_name": "KMeans_Segmentation",
     "k": 4,
-    "silhouette_score": 0.4919,
+    "silhouette_score": 0.3054,
     "cluster_mapping": {
       "2": "Champions",
-      "3": "Loyal",
-      "0": "At Risk",
-      "1": "Lost"
+      "1": "Loyal",
+      "3": "At Risk",
+      "0": "Lost"
     },
-    "segment_stats": [
-      {
-        "segment_name": "Champions",
-        "customer_count": 2416,
-        "avg_monetary": 1161.3259395695366,
-        "avg_recency": 239.00206953642385,
-        "avg_frequency": 1.0128311258278146
-      },
-      {
-        "segment_name": "Loyal",
-        "customer_count": 2772,
-        "avg_monetary": 289.6802525252525,
-        "avg_recency": 219.9592352092352,
-        "avg_frequency": 2.1143578643578644
-      },
-      {
-        "segment_name": "At Risk",
-        "customer_count": 50723,
-        "avg_monetary": 134.37916172150702,
-        "avg_recency": 127.83569583817992,
-        "avg_frequency": 1.0
-      },
-      {
-        "segment_name": "Lost",
-        "customer_count": 37439,
-        "avg_monetary": 133.44938433184646,
-        "avg_recency": 387.2448516253105,
-        "avg_frequency": 1.0
-      }
-    ]
+    "segment_stats": {
+      "Champions": 2807,
+      "Loyal": 33796,
+      "At Risk": 22276,
+      "Lost": 34479
+    }
   },
   "churn_prediction": {
     "model_name": "Churn_Prediction",
     "best_model": "RandomForest",
-    "random_forest": {
-      "auc_roc": 0.7374,
-      "auc_pr": 0.9138,
-      "f1_score": 0.8899,
-      "accuracy": 0.8017,
-      "precision": 0.8017,
-      "recall": 1.0
-    },
-    "logistic_regression": {
-      "auc_roc": 0.6933,
-      "auc_pr": 0.8964,
-      "f1_score": 0.8893,
-      "accuracy": 0.8009,
-      "precision": 0.8019,
-      "recall": 0.9982
-    },
-    "feature_importance": [
-      {
-        "feature": "avg_delivery_days",
-        "importance": 0.5974372353520024
+    "models": {
+      "RandomForest": {
+        "auc_roc": 0.9877,
+        "accuracy": 0.9675,
+        "f1_score": 0.9681,
+        "precision": 0.9699,
+        "recall": 0.9675
       },
-      {
-        "feature": "avg_freight_ratio",
-        "importance": 0.13811058247373512
-      },
-      {
-        "feature": "monetary",
-        "importance": 0.09647665776058482
-      },
-      {
-        "feature": "avg_order_value",
-        "importance": 0.09063466642905531
-      },
-      {
-        "feature": "avg_review_score",
-        "importance": 0.03178763509913255
-      },
-      {
-        "feature": "avg_installments",
-        "importance": 0.020908456627682568
-      },
-      {
-        "feature": "avg_items",
-        "importance": 0.019930878750723472
-      },
-      {
-        "feature": "frequency",
-        "importance": 0.0047138875070836545
+      "LogisticRegression": {
+        "auc_roc": 0.9858,
+        "accuracy": 0.9651,
+        "f1_score": 0.9656,
+        "precision": 0.967,
+        "recall": 0.9651
       }
-    ],
-    "confusion_matrix_rf": {
-      "true_positive": 14967,
-      "true_negative": 1,
-      "false_positive": 3702,
-      "false_negative": 0
     },
-    "confusion_matrix_lr": {
-      "true_positive": 14940,
-      "true_negative": 12,
-      "false_positive": 3691,
-      "false_negative": 27
-    }
+    "confusion_matrix": {
+      "true_positive": 14340,
+      "true_negative": 3632,
+      "false_positive": 103,
+      "false_negative": 501
+    },
+    "feature_importance": {
+      "f_score": 0.8843,
+      "frequency": 0.0443,
+      "avg_delivery_days": 0.0418,
+      "total_items_bought": 0.0141,
+      "category_diversity": 0.0062,
+      "avg_payment": 0.0044,
+      "monetary": 0.002,
+      "avg_review": 0.002,
+      "m_score": 0.0009
+    },
+    "features_used": [
+      "frequency",
+      "monetary",
+      "f_score",
+      "m_score",
+      "avg_review",
+      "avg_delivery_days",
+      "total_items_bought",
+      "avg_payment",
+      "category_diversity"
+    ]
   },
   "review_prediction": {
     "model_name": "Review_Score_Prediction",
-    "best_model": "RandomForestRegressor",
-    "random_forest_regressor": {
-      "rmse": 1.1339,
-      "r2": 0.2146,
-      "mae": 0.8717
-    },
-    "linear_regression": {
-      "rmse": 1.1883,
-      "r2": 0.1375,
-      "mae": 0.9155
-    },
-    "feature_importance": [
-      {
-        "feature": "estimated_vs_actual",
-        "importance": 0.7234869448355402
+    "best_model": "RandomForest",
+    "models": {
+      "RandomForest": {
+        "rmse": 1.1962,
+        "r2": 0.1669,
+        "mae": 0.9229
       },
-      {
-        "feature": "item_count",
-        "importance": 0.09181296788637697
-      },
-      {
-        "feature": "delivery_days",
-        "importance": 0.07374012790448549
-      },
-      {
-        "feature": "freight_value",
-        "importance": 0.031347170811323065
-      },
-      {
-        "feature": "freight_ratio",
-        "importance": 0.020089148898984128
-      },
-      {
-        "feature": "price",
-        "importance": 0.017297278887591073
-      },
-      {
-        "feature": "installments",
-        "importance": 0.005260152310915625
+      "LinearRegression": {
+        "rmse": 1.2216,
+        "r2": 0.1312,
+        "mae": 0.9446
       }
+    },
+    "feature_importance": {
+      "delivery_days": 0.693,
+      "category_index": 0.1099,
+      "total_items": 0.0871,
+      "total_freight_value": 0.0544,
+      "freight_ratio": 0.0202,
+      "total_price": 0.0186,
+      "total_payment_value": 0.0167
+    },
+    "features_used": [
+      "total_price",
+      "total_freight_value",
+      "delivery_days",
+      "total_payment_value",
+      "total_items",
+      "freight_ratio",
+      "category_index"
     ]
-  }
+  },
+  "timestamp": "2026-06-26T12:31:24.696761",
+  "duration_seconds": 168.1
 }
