@@ -8,7 +8,7 @@
 <div class="charts-grid-2">
   <div class="card card-chart animate-in" style="--delay:.1s">
     <div class="card-header">
-      <h3>🏷️ Top 10 Danh Mục Theo Doanh Số</h3>
+      <h3> Top 10 Danh Mục Theo Doanh Số</h3>
     </div>
     <div class="card-body chart-container chart-container-tall">
       <canvas id="topProductsBar"></canvas>
@@ -16,7 +16,7 @@
   </div>
   <div class="card card-chart animate-in" style="--delay:.25s">
     <div class="card-header">
-      <h3>🕸️ So Sánh Top 5 Danh Mục</h3>
+      <h3> So Sánh Top 5 Danh Mục</h3>
     </div>
     <div class="card-body chart-container chart-container-sq">
       <canvas id="categoryRadar"></canvas>
@@ -26,10 +26,59 @@
 
 <div class="card card-chart animate-in" style="--delay:.4s">
   <div class="card-header">
-    <h3>💲 Giá vs Đánh Giá Trung Bình</h3>
+    <h3> Giá vs Đánh Giá Trung Bình</h3>
   </div>
   <div class="card-body chart-container">
     <canvas id="priceReviewScatter"></canvas>
   </div>
 </div>
+
+  <!-- ─── LOGISTICS SECTION ────────────────────────────────────────────────── -->
+  <div class="page-header" style="margin-top: 3rem;">
+    <h2><span class="lang-en" style="display:none;">Logistics & Delivery</span><span class="lang-vi">Phân Tích Vận Chuyển</span></h2>
+    <p><span class="lang-en" style="display:none;">Delivery times, late rates, and freight impact</span><span class="lang-vi">Thời gian giao hàng, tỷ lệ trễ hẹn và tác động của phí ship</span></p>
+  </div>
+
+  <!-- Logistics KPIs -->
+  <div class="kpi-container">
+    <div class="kpi-card">
+      <h3 class="kpi-title"><span class="lang-en" style="display:none;">AVG DELIVERY DAYS</span><span class="lang-vi">GIAO HÀNG TRUNG BÌNH</span></h3>
+      <div class="kpi-value" id="kpiAvgDelivery" style="color: var(--primary)">-</div>
+    </div>
+    <div class="kpi-card">
+      <h3 class="kpi-title"><span class="lang-en" style="display:none;">LATE DELIVERY RATE</span><span class="lang-vi">TỶ LỆ GIAO TRỄ</span></h3>
+      <div class="kpi-value" id="kpiLateRate" style="color: var(--danger)">-</div>
+    </div>
+    <div class="kpi-card">
+      <h3 class="kpi-title"><span class="lang-en" style="display:none;">AVG FREIGHT RATIO</span><span class="lang-vi">PHÍ SHIP / ĐƠN HÀNG</span></h3>
+      <div class="kpi-value" id="kpiFreightRatio" style="color: var(--warning)">-</div>
+    </div>
+  </div>
+
+  <!-- Logistics Charts -->
+  <div class="dashboard-grid">
+    <div class="chart-card">
+      <h2 class="chart-title"><span class="lang-en" style="display:none;">Delivery Status</span><span class="lang-vi">Trạng Thái Giao Hàng</span></h2>
+      <div class="chart-container" style="height: 300px;">
+        <canvas id="statusChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <h2 class="chart-title"><span class="lang-en" style="display:none;">Avg Delivery Days by State</span><span class="lang-vi">Thời Gian Giao Hàng Theo Bang</span></h2>
+      <div class="chart-container" style="height: 300px;">
+        <canvas id="stateDeliveryChart"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <div class="dashboard-grid" style="grid-template-columns: 1fr;">
+    <div class="chart-card">
+      <h2 class="chart-title"><span class="lang-en" style="display:none;">Impact of Late Delivery on Review Score</span><span class="lang-vi">Tác Động Của Giao Trễ Lên Đánh Giá</span></h2>
+      <div class="chart-container" style="height: 300px;">
+        <canvas id="impactChart"></canvas>
+      </div>
+    </div>
+  </div>
+
 {% endblock %}

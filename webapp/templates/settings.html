@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Cài Đặt - Olist E-Commerce Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2 class="page-title">Cài Đặt Hệ Thống</h2>
+  <p class="page-subtitle">Tùy chỉnh ngôn ngữ và hiển thị dữ liệu</p>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3>Tùy Chọn Hiển Thị</h3>
+  </div>
+  <div class="card-body">
+    <div class="form-group" style="margin-bottom: 1.5rem;">
+      <label class="form-label" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Ngôn ngữ dữ liệu</label>
+      <select id="langSelect" class="form-control" style="width: 100%; max-width: 400px; padding: 0.7rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <option value="VI">Tiếng Việt</option>
+        <option value="EN">Tiếng Anh (Bản gốc)</option>
+      </select>
+      <p class="form-hint" style="margin-top: 0.5rem; font-size: 0.85rem; color: #64748b;">Áp dụng cho toàn bộ báo cáo, tên danh mục, và phân khúc khách hàng.</p>
+    </div>
+
+    <div class="form-group" style="margin-bottom: 2rem;">
+      <label class="form-label" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Đơn vị tiền tệ</label>
+      <select id="currencySelect" class="form-control" style="width: 100%; max-width: 400px; padding: 0.7rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <option value="VND">Việt Nam Đồng (VNĐ)</option>
+        <option value="BRL">Real Brazil (BRL)</option>
+      </select>
+      <p class="form-hint" style="margin-top: 0.5rem; font-size: 0.85rem; color: #64748b;">Áp dụng tỷ giá ước tính: 1 BRL = 4,500 VNĐ</p>
+    </div>
+
+    <button id="saveSettingsBtn" class="btn btn-primary" style="background: var(--accent-purple); color: white; padding: 0.8rem 1.5rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+      Lưu Cài Đặt
+    </button>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const langSelect = document.getElementById('langSelect');
+    const currSelect = document.getElementById('currencySelect');
+    const saveBtn = document.getElementById('saveSettingsBtn');
+
+    // Load current values
+    langSelect.value = localStorage.getItem('lang_mode') || 'VI';
+    currSelect.value = localStorage.getItem('currency_mode') || 'BRL';
+
+    saveBtn.addEventListener('click', () => {
+      localStorage.setItem('lang_mode', langSelect.value);
+      localStorage.setItem('currency_mode', currSelect.value);
+      
+      // Update global vars so app.js can pick them up (or app.js will just read localstorage on load)
+      window.LANG_MODE = langSelect.value;
+      window.CURRENCY_MODE = currSelect.value;
+
+      alert('Đã lưu cài đặt thành công!');
+      location.reload(); // Reload to apply new settings to header etc.
+    });
+  });
+</script>
+{% endblock %}

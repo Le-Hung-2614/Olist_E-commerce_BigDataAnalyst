@@ -67,10 +67,10 @@ const ChartTheme = (() => {
         },
       },
       tooltip: {
-        backgroundColor: 'rgba(10, 14, 39, 0.92)',
-        titleColor: '#f8fafc',
-        bodyColor: '#e2e8f0',
-        borderColor: 'rgba(139, 92, 246, 0.25)',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        titleColor: '#344767',
+        bodyColor: '#67748e',
+        borderColor: 'rgba(0, 0, 0, 0.05)',
         borderWidth: 1,
         cornerRadius: 8,
         padding: 12,
@@ -82,18 +82,18 @@ const ChartTheme = (() => {
     },
     scales: {
       x: {
-        grid: { color: 'rgba(148, 163, 184, 0.06)', drawBorder: false },
+        grid: { color: 'rgba(0, 0, 0, 0.05)', drawBorder: false },
         ticks: {
-          color: '#64748b',
+          color: '#a0aec0',
           font: { family: FONT_FAMILY, size: 10, weight: '500' },
           padding: 8,
         },
         border: { display: false },
       },
       y: {
-        grid: { color: 'rgba(148, 163, 184, 0.06)', drawBorder: false },
+        grid: { color: 'rgba(0, 0, 0, 0.05)', drawBorder: false },
         ticks: {
-          color: '#64748b',
+          color: '#a0aec0',
           font: { family: FONT_FAMILY, size: 10, weight: '500' },
           padding: 8,
         },
@@ -127,7 +127,7 @@ const ChartTheme = (() => {
           pointRadius: 3,
           pointHoverRadius: 6,
           pointBackgroundColor: COLORS.purple,
-          pointBorderColor: '#0a0e27',
+          pointBorderColor: '#ffffff',
           pointBorderWidth: 2,
           pointHoverBackgroundColor: '#fff',
         }],
@@ -137,14 +137,14 @@ const ChartTheme = (() => {
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: (c) => `${c.dataset.label}: ${formatNumber(c.raw)} BRL`,
+              label: (c) => `${c.dataset.label}: ${formatNumber(c.raw)} ${window.CURRENCY_MODE === 'VND' ? 'VNĐ' : 'BRL'}`,
             },
           },
         },
         scales: {
           y: {
             ticks: {
-              callback: (v) => formatCompact(v) + ' BRL',
+              callback: (v) => formatCompact(v) + (window.CURRENCY_MODE === 'VND' ? ' VNĐ' : ' BRL'),
             },
           },
         },
@@ -155,7 +155,7 @@ const ChartTheme = (() => {
   /**
    * Bar chart (vertical)
    */
-  function createBarChart(canvasId, labels, data, label = 'Value', color = null) {
+  function createBarChart(canvasId, labels, data, label = 'Value', color = null, tooltipCallback = null) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return null;
 
@@ -182,7 +182,10 @@ const ChartTheme = (() => {
         }],
       },
       options: deepMerge({}, DEFAULT_OPTIONS, {
-        plugins: { legend: { display: false } },
+        plugins: { 
+          legend: { display: false },
+          tooltip: tooltipCallback ? { callbacks: { label: tooltipCallback } } : undefined
+        },
         scales: {
           y: {
             beginAtZero: true,
@@ -241,8 +244,8 @@ const ChartTheme = (() => {
         datasets: [{
           data,
           backgroundColor: labels.map((_, i) => withAlpha(PALETTE[i % PALETTE.length], 0.8)),
-          borderColor: '#0a0e27',
-          borderWidth: 3,
+          borderColor: '#ffffff',
+          borderWidth: 2,
           hoverOffset: 14,
         }],
       },
@@ -255,7 +258,7 @@ const ChartTheme = (() => {
           legend: {
             position: 'bottom',
             labels: {
-              color: '#94a3b8',
+              color: '#67748e',
               font: { family: FONT_FAMILY, size: 11, weight: '500' },
               padding: 16,
               usePointStyle: true,
@@ -282,8 +285,8 @@ const ChartTheme = (() => {
         datasets: [{
           data,
           backgroundColor: labels.map((_, i) => withAlpha(PALETTE[i % PALETTE.length], 0.8)),
-          borderColor: '#0a0e27',
-          borderWidth: 3,
+          borderColor: '#ffffff',
+          borderWidth: 2,
           hoverOffset: 12,
         }],
       },
@@ -295,7 +298,7 @@ const ChartTheme = (() => {
           legend: {
             position: 'bottom',
             labels: {
-              color: '#94a3b8',
+              color: '#67748e',
               font: { family: FONT_FAMILY, size: 11, weight: '500' },
               padding: 16,
               usePointStyle: true,
@@ -310,19 +313,24 @@ const ChartTheme = (() => {
   /**
    * Scatter chart
    */
-  function createScatter(canvasId, datasets, xLabel = 'X', yLabel = 'Y') {
+  function createScatter(canvasId, datasets, xLabel = 'X', yLabel = 'Y', tooltipCallback = null) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return null;
+
+    const plugins = {
+      legend: { position: 'top' },
+    };
+    if (tooltipCallback) {
+      plugins.tooltip = {
+        callbacks: { label: tooltipCallback }
+      };
+    }
 
     return new Chart(ctx, {
       type: 'scatter',
       data: { datasets },
       options: deepMerge({}, DEFAULT_OPTIONS, {
-        plugins: {
-          legend: {
-            position: 'top',
-          },
-        },
+        plugins: plugins,
         scales: {
           x: {
             title: {
@@ -418,15 +426,28 @@ const ChartTheme = (() => {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 
+  function convertCur(n) {
+    const isVND = window.CURRENCY_MODE === 'VND';
+    return isVND ? n * 4500 : n;
+  }
+
   function formatNumber(n) {
     if (n == null) return '0';
-    return Number(n).toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    let val = convertCur(n);
+    return Number(val).toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   }
 
   function formatCompact(n) {
-    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
-    return n.toString();
+    let val = convertCur(n);
+    const isVND = window.CURRENCY_MODE === 'VND';
+    if (isVND) {
+      if (val >= 1e9) return (val / 1e9).toFixed(1) + ' Tỷ';
+      if (val >= 1e6) return (val / 1e6).toFixed(1) + ' Tr';
+    } else {
+      if (val >= 1e6) return (val / 1e6).toFixed(1) + 'M';
+      if (val >= 1e3) return (val / 1e3).toFixed(1) + 'K';
+    }
+    return val.toString();
   }
 
   function deepMerge(target, ...sources) {

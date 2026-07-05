@@ -7,48 +7,55 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
   <!-- ─── Sidebar ─────────────────────────────────────────────────── -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <div class="logo-icon">📊</div>
-      <h1 class="logo-text">Olist<span>DW</span></h1>
+      <div class="logo-icon"></div>
+      <h1 class="logo-text">Phân tích sàn thương mại điện tử<span>Olist</span></h1>
+      <button id="desktopToggle" class="desktop-toggle" aria-label="Collapse sidebar">◀</button>
     </div>
 
     <nav class="sidebar-nav">
       <a href="/" class="nav-item {% if page == 'overview' %}active{% endif %}">
-        <span class="nav-icon">🏠</span>
+        <span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span>
         <span class="nav-label">Tổng quan</span>
       </a>
       <a href="/segments" class="nav-item {% if page == 'segments' %}active{% endif %}">
-        <span class="nav-icon">👥</span>
+        <span class="nav-icon"><i class="fa-solid fa-users"></i></span>
         <span class="nav-label">Phân khúc KH</span>
       </a>
       <a href="/churn" class="nav-item {% if page == 'churn' %}active{% endif %}">
-        <span class="nav-icon">⚠️</span>
+        <span class="nav-icon"><i class="fa-solid fa-user-minus"></i></span>
         <span class="nav-label">Rời bỏ KH</span>
       </a>
       <a href="/products" class="nav-item {% if page == 'products' %}active{% endif %}">
-        <span class="nav-icon">📦</span>
+        <span class="nav-icon"><i class="fa-solid fa-box-open"></i></span>
         <span class="nav-label">Sản phẩm</span>
       </a>
       <a href="/geographic" class="nav-item {% if page == 'geographic' %}active{% endif %}">
-        <span class="nav-icon">🗺️</span>
-        <span class="nav-label">Địa lý</span>
+        <span class="nav-icon"><i class="fa-solid fa-map-location-dot"></i></span>
+        <span class="nav-label">Phân bố doanh thu</span>
       </a>
       <a href="/models" class="nav-item {% if page == 'models' %}active{% endif %}">
-        <span class="nav-icon">🤖</span>
+        <span class="nav-icon"><i class="fa-solid fa-robot"></i></span>
         <span class="nav-label">Mô hình ML</span>
+      </a>
+      <a href="/settings" class="nav-item {% if page == 'settings' %}active{% endif %}">
+        <span class="nav-icon"><i class="fa-solid fa-gear"></i></span>
+        <span class="nav-label">Cài đặt</span>
       </a>
     </nav>
 
     <div class="sidebar-footer">
-      <div class="sidebar-badge">Big Data Project</div>
-      <p class="sidebar-copy">&copy; 2026 Olist DW</p>
+      <div class="sidebar-badge">Đề tài Big Data</div>
+      <p class="sidebar-copy">&copy; Nhóm 18</p>
     </div>
   </aside>
 
@@ -72,9 +79,24 @@
     </footer>
   </main>
 
+  <!-- ─── Core Scripts ─────────────────────────────────────────────── -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
   <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
   <script>
+    // Load sidebar state
+    if (localStorage.getItem('sidebar_collapsed') === 'true') {
+      document.body.classList.add('sidebar-collapsed');
+    }
+
+    document.getElementById('desktopToggle')?.addEventListener('click', () => {
+      document.body.classList.toggle('sidebar-collapsed');
+      const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+      localStorage.setItem('sidebar_collapsed', isCollapsed);
+    });
+
     // Sidebar toggle for mobile
     document.getElementById('sidebarToggle').addEventListener('click', function () {
       document.getElementById('sidebar').classList.toggle('open');

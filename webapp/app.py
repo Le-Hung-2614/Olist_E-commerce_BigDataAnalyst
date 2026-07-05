@@ -9,6 +9,8 @@ from bson import json_util
 import json
 import math
 import os
+import numpy as np
+import joblib
 from datetime import datetime
 
 app = Flask(__name__)
@@ -24,6 +26,14 @@ products_col = db["products"]
 sellers_col = db["sellers"]
 agg_col = db["aggregations"]
 
+# -- ML Models --
+CHURN_MODEL_DICT = None
+try:
+    model_path = os.path.join("tmp_models", "churn_prediction.joblib")
+    if os.path.exists(model_path):
+        CHURN_MODEL_DICT = joblib.load(model_path)
+except Exception as e:
+    print(f"Error loading churn model: {e}")
 
 # -- Helpers --
 def _json(data):
@@ -114,8 +124,11 @@ CATEGORY_VI = {
 
 def translate_category(name):
     """Translate English category name to Vietnamese."""
+    lang = request.args.get('lang', 'VI')
     if not name:
-        return "Khong xac dinh"
+        return "Unknown" if lang == 'EN' else "Khong xac dinh"
+    if lang == 'EN':
+        return name.replace("_", " ").title()
     return CATEGORY_VI.get(name, name.replace("_", " ").title())
 
 
@@ -142,6 +155,10 @@ def geographic():
 @app.route("/models")
 def models():
     return render_template("models.html", page="models")
+
+@app.route("/settings")
+def settings():
+    return render_template("settings.html", page="settings")
 
 
 # ====================================================================
@@ -615,30 +632,125 @@ def api_models():
 def api_predict():
     try:
         data = request.get_json(force=True)
+        recency = float(data.get("recency", 0))
         frequency = float(data.get("frequency", 1))
         monetary = float(data.get("monetary", 0))
+        review = float(data.get("review_score", 4))
+        delivery = float(data.get("delivery_days", 10))
 
-        result = list(customers_col.aggregate([
-            {"$match": {
-                "frequency": {"$gte": frequency - 1, "$lte": frequency + 1},
-                "monetary": {"$gte": monetary * 0.7, "$lte": monetary * 1.3},
-            }},
-            {"$group": {
-                "_id": None,
-                "avg_prob": {"$avg": "$churn_probability"},
-            }}
-        ]))
-        prob = float(result[0]["avg_prob"]) if result and result[0].get("avg_prob") else 0.5
+        if CHURN_MODEL_DICT is not None:
+            scaler = CHURN_MODEL_DICT['scaler']
+            model = CHURN_MODEL_DICT['model']
+            
+            # Create feature array matching the 5 features
+            X_input = np.array([[recency, frequency, monetary, review, delivery]])
+            X_scaled = scaler.transform(X_input)
+            
+            # Predict probability of class 1
+            prob = float(model.predict_proba(X_scaled)[0][1])
+        else:
+            # Fallback ML heuristic if model fails to load
+            base_prob = 0.4
+            base_prob += (recency - 100) * 0.0015
+            base_prob -= (frequency - 1) * 0.05
+            base_prob -= (review - 3) * 0.05
+            prob = max(0.01, min(0.99, base_prob))
 
         return jsonify({
             "probability": round(prob, 3),
-            "label": "High churn risk" if prob >= 0.5 else "Likely to stay",
+            "label": "Nguy cơ rời bỏ cao" if prob >= 0.5 else "Khả năng gắn bó",
             "risk_level": (
-                "Very High" if prob >= 0.8 else
-                "High" if prob >= 0.6 else
-                "Medium" if prob >= 0.4 else
-                "Low" if prob >= 0.2 else "Very Low"
+                "Rất Cao" if prob >= 0.8 else
+                "Cao" if prob >= 0.6 else
+                "Trung Bình" if prob >= 0.4 else
+                "Thấp" if prob >= 0.2 else "Rất Thấp"
             ),
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ====================================================================
+#  API - Logistics & Delivery
+# ====================================================================
+@app.route("/api/logistics_data")
+def api_logistics_data():
+    try:
+        lang = request.args.get('lang', 'VI')
+        
+        # 1. KPIs
+        pipeline_kpis = [
+            {"$match": {"delivery_days": {"$ne": None}, "order_status": "delivered"}},
+            {"$group": {
+                "_id": None,
+                "avg_delivery_days": {"$avg": "$delivery_days"},
+                "avg_freight_ratio": {"$avg": "$freight_ratio"},
+                "total_delivered": {"$sum": 1},
+                "total_late": {"$sum": {"$cond": [{"$eq": ["$delivery_status", "late"]}, 1, 0]}}
+            }}
+        ]
+        kpi_result = list(orders_col.aggregate(pipeline_kpis))
+        kpis = {}
+        if kpi_result:
+            r = kpi_result[0]
+            kpis["avg_delivery_days"] = _safe_round(r.get("avg_delivery_days", 0), 1)
+            kpis["avg_freight_ratio"] = _safe_round(r.get("avg_freight_ratio", 0) * 100, 1)
+            total = r.get("total_delivered", 1)
+            late = r.get("total_late", 0)
+            kpis["late_rate"] = _safe_round((late / total) * 100, 1) if total else 0
+
+        # 2. Status Distribution
+        pipeline_status = [
+            {"$group": {"_id": "$delivery_status", "count": {"$sum": 1}}}
+        ]
+        status_res = list(orders_col.aggregate(pipeline_status))
+        status_map = {
+            "on_time": "Đúng hạn" if lang == 'VI' else "On Time",
+            "late": "Trễ hạn" if lang == 'VI' else "Late",
+            "not_delivered": "Chưa giao" if lang == 'VI' else "Not Delivered"
+        }
+        status_labels = []
+        status_data = []
+        for s in status_res:
+            key = s["_id"] if s["_id"] else "not_delivered"
+            status_labels.append(status_map.get(key, key))
+            status_data.append(s["count"])
+
+        # 3. Delivery by State (Top 10 States with Most Orders)
+        pipeline_state = [
+            {"$match": {"delivery_days": {"$ne": None}, "order_status": "delivered", "customer": {"$type": "array"}}},
+            {"$group": {
+                "_id": {"$arrayElemAt": ["$customer", 3]},
+                "avg_delivery": {"$avg": "$delivery_days"},
+                "count": {"$sum": 1}
+            }},
+            {"$sort": {"count": -1}},
+            {"$limit": 10}
+        ]
+        state_res = list(orders_col.aggregate(pipeline_state))
+        state_labels = [s["_id"] for s in state_res if s["_id"]]
+        state_delivery = [_safe_round(s["avg_delivery"], 1) for s in state_res if s["_id"]]
+
+        # 4. Review Score by Delivery Status
+        pipeline_impact = [
+            {"$match": {"review": {"$type": "array"}, "delivery_status": {"$in": ["on_time", "late"]}}},
+            {"$group": {
+                "_id": "$delivery_status",
+                "avg_score": {"$avg": {"$arrayElemAt": ["$review", 0]}}
+            }}
+        ]
+        impact_res = list(orders_col.aggregate(pipeline_impact))
+        impact_labels = []
+        impact_data = []
+        for i in impact_res:
+            key = i["_id"]
+            impact_labels.append(status_map.get(key, key))
+            impact_data.append(_safe_round(i["avg_score"], 2))
+
+        return jsonify({
+            "kpis": kpis,
+            "status_distribution": {"labels": status_labels, "data": status_data},
+            "state_delivery": {"labels": state_labels, "data": state_delivery},
+            "impact": {"labels": impact_labels, "data": impact_data}
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -9,7 +9,9 @@
 
   async function fetchJSON(url) {
     try {
-      const res = await fetch(url);
+      const sep = url.includes('?') ? '&' : '?';
+      const fetchUrl = `${url}${sep}lang=${window.LANG_MODE}`;
+      const res = await fetch(fetchUrl);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.json();
     } catch (err) {
@@ -18,11 +20,24 @@
     }
   }
 
+  window.CURRENCY_MODE = localStorage.getItem('currency_mode') || 'BRL';
+  const VND_RATE = 4500; // 1 BRL ~ 4500 VND
+
+  function convertCur(n) { return window.CURRENCY_MODE === 'VND' ? n * VND_RATE : n; }
+
   function formatCurrency(n) {
-    if (n == null) return '0 BRL';
-    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M BRL';
-    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K BRL';
-    return Number(n).toLocaleString('vi-VN', { maximumFractionDigits: 0 }) + ' BRL';
+    if (n == null) return window.CURRENCY_MODE === 'VND' ? '0 VNĐ' : '0 BRL';
+    let val = convertCur(n);
+    let sfx = window.CURRENCY_MODE === 'VND' ? ' VNĐ' : ' BRL';
+    
+    if (window.CURRENCY_MODE === 'VND') {
+      if (val >= 1e9) return (val / 1e9).toFixed(2) + ' Tỷ' + sfx;
+      if (val >= 1e6) return (val / 1e6).toFixed(2) + ' Tr' + sfx;
+    } else {
+      if (val >= 1e6) return (val / 1e6).toFixed(2) + 'M' + sfx;
+      if (val >= 1e3) return (val / 1e3).toFixed(1) + 'K' + sfx;
+    }
+    return Number(val).toLocaleString('vi-VN', { maximumFractionDigits: 0 }) + sfx;
   }
 
   function formatInt(n) {
@@ -52,13 +67,68 @@
   function segmentBadgeClass(segment) {
     if (!segment) return 'seg-default';
     const s = segment.toLowerCase();
-    if (s.includes('champion')) return 'seg-champions';
-    if (s.includes('loyal'))    return 'seg-loyal';
-    if (s.includes('potential') || s.includes('promis')) return 'seg-potential';
-    if (s.includes('risk'))     return 'seg-at-risk';
-    if (s.includes('lost') || s.includes('hiber'))  return 'seg-lost';
-    if (s.includes('new'))      return 'seg-new';
+    if (s.includes('vip') || s.includes('champion')) return 'seg-champions';
+    if (s.includes('trung thành') || s.includes('loyal')) return 'seg-loyal';
+    if (s.includes('tiềm năng') || s.includes('hứa hẹn') || s.includes('potential') || s.includes('promis')) return 'seg-potential';
+    if (s.includes('nguy cơ') || s.includes('risk')) return 'seg-at-risk';
+    if (s.includes('mất') || s.includes('đông') || s.includes('lost') || s.includes('hiber')) return 'seg-lost';
+    if (s.includes('mới') || s.includes('new')) return 'seg-new';
     return 'seg-default';
+  }
+
+  const SEGMENT_VI = {
+    'Champions': 'Khách Hàng VIP',
+    'Loyal': 'Trung Thành',
+    'Potential Loyalist': 'Tiềm Năng',
+    'Promising': 'Đầy Hứa Hẹn',
+    'New Customers': 'Khách Mới',
+    'At Risk': 'Nguy Cơ Rời Bỏ',
+    'Lost': 'Đã Ngừng Mua',
+    'Hibernating': 'Đang Ngủ Đông',
+    'About To Sleep': 'Sắp Ngủ Đông',
+    "Can't Lose Them": 'Không Thể Mất'
+  };
+
+  window.LANG_MODE = localStorage.getItem('lang_mode') || 'VI';
+
+  function translateSegment(seg) {
+    if (!seg) return 'N/A';
+    if (window.LANG_MODE === 'EN') return seg;
+    if (SEGMENT_VI[seg]) return SEGMENT_VI[seg];
+    for (const [en, vi] of Object.entries(SEGMENT_VI)) {
+      if (seg.toLowerCase().includes(en.toLowerCase())) return vi;
+    }
+    return seg;
+  }
+
+  const BRAZIL_STATES = {
+    'AC': 'Acre', 'AL': 'Alagoas', 'AP': 'Amapá', 'AM': 'Amazonas', 'BA': 'Bahia',
+    'CE': 'Ceará', 'DF': 'Distrito Federal', 'ES': 'Espírito Santo', 'GO': 'Goiás',
+    'MA': 'Maranhão', 'MT': 'Mato Grosso', 'MS': 'Mato Grosso do Sul', 'MG': 'Minas Gerais',
+    'PA': 'Pará', 'PB': 'Paraíba', 'PR': 'Paraná', 'PE': 'Pernambuco', 'PI': 'Piauí',
+    'RJ': 'Rio de Janeiro', 'RN': 'Rio Grande do Norte', 'RS': 'Rio Grande do Sul',
+    'RO': 'Rondônia', 'RR': 'Roraima', 'SC': 'Santa Catarina', 'SP': 'São Paulo',
+    'SE': 'Sergipe', 'TO': 'Tocantins'
+  };
+
+  const PAYMENT_VI = {
+    'credit_card': 'Thẻ Tín Dụng',
+    'boleto': 'Thanh Toán Boleto',
+    'voucher': 'Mã Giảm Giá',
+    'debit_card': 'Thẻ Ghi Nợ',
+    'unknown': 'Không Xác Định'
+  };
+
+  function translatePayment(method) {
+    if (!method) return 'N/A';
+    if (window.LANG_MODE === 'EN') return method;
+    return PAYMENT_VI[method.toLowerCase()] || method;
+  }
+
+  function getFullStateName(stateCode) {
+    if (!stateCode) return 'Unknown';
+    if (window.LANG_MODE === 'EN') return stateCode;
+    return BRAZIL_STATES[stateCode.toUpperCase()] || stateCode;
   }
 
   function probBadge(prob) {
@@ -86,10 +156,26 @@
       const revwEl = document.getElementById('kpiReview');
       const custEl = document.getElementById('kpiCustomers');
 
-      if (kpi.total_revenue >= 1e6) {
-        animateValue(revEl, Math.round(kpi.total_revenue / 1e6), 1400, '', 'M BRL');
+      const cardRev = revEl.closest('.kpi-card');
+      if (cardRev) {
+        cardRev.style.cursor = 'pointer';
+        cardRev.title = 'Click để đổi đơn vị tiền (BRL ↔ VNĐ)';
+        cardRev.onclick = () => {
+          window.CURRENCY_MODE = window.CURRENCY_MODE === 'BRL' ? 'VND' : 'BRL';
+          localStorage.setItem('currency_mode', window.CURRENCY_MODE);
+          location.reload();
+        };
+      }
+
+      const val = convertCur(kpi.total_revenue);
+      const sfx = window.CURRENCY_MODE === 'VND' ? ' VNĐ' : ' BRL';
+      
+      if (window.CURRENCY_MODE === 'VND') {
+        if (val >= 1e9) animateValue(revEl, Math.round(val / 1e9), 1400, '', ' Tỷ' + sfx);
+        else animateValue(revEl, Math.round(val / 1e6), 1400, '', ' Tr' + sfx);
       } else {
-        animateValue(revEl, Math.round(kpi.total_revenue / 1e3), 1400, '', 'K BRL');
+        if (val >= 1e6) animateValue(revEl, Math.round(val / 1e6), 1400, '', 'M' + sfx);
+        else animateValue(revEl, Math.round(val / 1e3), 1400, '', 'K' + sfx);
       }
       animateValue(ordEl, kpi.total_orders, 1200);
       revwEl.textContent = Number(kpi.avg_review).toFixed(2) + ' ⭐';
@@ -112,7 +198,7 @@
         'categoryChart',
         top10.map(d => truncate(d.category, 18)),
         top10.map(d => d.revenue),
-        'Doanh Thu (BRL)'
+        window.CURRENCY_MODE === 'VND' ? 'Doanh Thu (VNĐ)' : 'Doanh Thu (BRL)'
       );
     }
   }
@@ -129,7 +215,7 @@
     if (data.distribution && data.distribution.length) {
       ChartTheme.createDoughnut(
         'segmentDoughnut',
-        data.distribution.map(d => d.segment || 'N/A'),
+        data.distribution.map(d => translateSegment(d.segment || 'N/A')),
         data.distribution.map(d => d.count)
       );
     }
@@ -138,7 +224,7 @@
     if (data.rfm && data.rfm.length) {
       const segGroups = {};
       data.rfm.forEach(c => {
-        const seg = c.segment || 'Unknown';
+        const seg = translateSegment(c.segment || 'Unknown');
         if (!segGroups[seg]) segGroups[seg] = [];
         segGroups[seg].push({ x: c.recency, y: c.monetary });
       });
@@ -153,7 +239,7 @@
         pointHoverRadius: 7,
       }));
 
-      ChartTheme.createScatter('rfmScatter', datasets, 'Recency (ngay)', 'Tong chi (BRL)');
+      ChartTheme.createScatter('rfmScatter', datasets, 'Recency (ngay)', window.CURRENCY_MODE === 'VND' ? 'Tong chi (VNĐ)' : 'Tong chi (BRL)');
     }
 
     // Table
@@ -162,12 +248,12 @@
       tbody.innerHTML = data.top_customers.map(c => `
         <tr>
           <td>${truncate(c.customer_id, 12)}</td>
-          <td><span class="seg-badge ${segmentBadgeClass(c.segment)}">${c.segment || '—'}</span></td>
+          <td><span class="seg-badge ${segmentBadgeClass(translateSegment(c.segment))}">${translateSegment(c.segment) || '—'}</span></td>
           <td>${c.city || '—'}</td>
-          <td>${c.state || '—'}</td>
+          <td title="${getFullStateName(c.state)}">${c.state || '—'}</td>
           <td>${c.recency != null ? c.recency : '—'}</td>
           <td>${c.frequency != null ? c.frequency : '—'}</td>
-          <td>${c.monetary != null ? Number(c.monetary).toLocaleString('vi-VN', {maximumFractionDigits:0}) : '—'}</td>
+          <td>${c.monetary != null ? formatCurrency(c.monetary) : '—'}</td>
         </tr>
       `).join('');
     }
@@ -205,7 +291,7 @@
     if (data.by_segment && data.by_segment.length) {
       ChartTheme.createBarChart(
         'churnBySegment',
-        data.by_segment.map(d => d.segment),
+        data.by_segment.map(d => translateSegment(d.segment)),
         data.by_segment.map(d => d.churn_rate),
         'Tỷ lệ Churn (%)',
         null
@@ -247,11 +333,11 @@
         return `
           <tr>
             <td>${truncate(c.customer_id, 12)}</td>
-            <td><span class="seg-badge ${segmentBadgeClass(c.segment)}">${c.segment || '—'}</span></td>
+            <td><span class="seg-badge ${segmentBadgeClass(translateSegment(c.segment))}">${translateSegment(c.segment) || '—'}</span></td>
             <td>${c.city || '—'}</td>
-            <td>${c.state || '—'}</td>
+            <td title="${getFullStateName(c.state)}">${c.state || '—'}</td>
             <td><span class="prob-badge ${pb.cls}">${pb.text}</span></td>
-            <td>${c.monetary != null ? Number(c.monetary).toLocaleString('vi-VN', {maximumFractionDigits:0}) : '—'}</td>
+            <td>${c.monetary != null ? formatCurrency(c.monetary) : '—'}</td>
             <td>${c.recency != null ? c.recency : '—'}</td>
           </tr>`;
       }).join('');
@@ -308,7 +394,7 @@
     if (data.length) {
       const scatterData = data
         .filter(d => d.avg_price && d.avg_review)
-        .map(d => ({ x: d.avg_price, y: d.avg_review }));
+        .map(d => ({ x: d.avg_price, y: d.avg_review, name: d.category }));
 
       ChartTheme.createScatter('priceReviewScatter', [{
         label: 'Danh Mục',
@@ -318,7 +404,59 @@
         borderWidth: 1,
         pointRadius: 6,
         pointHoverRadius: 9,
-      }], 'Gia Trung Binh (BRL)', 'Danh Gia TB');
+      }], window.CURRENCY_MODE === 'VND' ? 'Gia Trung Binh (VNĐ)' : 'Gia Trung Binh (BRL)', 'Danh Gia TB', 
+      (ctx) => {
+        const pt = ctx.raw;
+        return `${pt.name || 'Danh mục'}: ${formatCurrency(pt.x)}, ${pt.y.toFixed(2)} ⭐`;
+      });
+    }
+
+    // -- Fetch Logistics Data --
+    const logData = await fetchJSON('/api/logistics_data');
+    if (logData) {
+      // 1. Update KPIs
+      if (logData.kpis) {
+        document.getElementById('kpiAvgDelivery').innerText = logData.kpis.avg_delivery_days + " " + (window.LANG_MODE === 'EN' ? "days" : "ngày");
+        document.getElementById('kpiLateRate').innerText = logData.kpis.late_rate + "%";
+        document.getElementById('kpiFreightRatio').innerText = logData.kpis.avg_freight_ratio + "%";
+      }
+
+      // 2. Status Chart (Doughnut)
+      if (logData.status_distribution) {
+        ChartTheme.createDoughnut(
+          'statusChart',
+          logData.status_distribution.labels,
+          logData.status_distribution.data
+        );
+      }
+
+      // 3. State Delivery Time (Bar Chart)
+      if (logData.state_delivery) {
+        ChartTheme.createBarChart(
+          'stateDeliveryChart',
+          logData.state_delivery.labels,
+          logData.state_delivery.data,
+          window.LANG_MODE === 'EN' ? 'Avg Delivery Days' : 'Ngày giao hàng trung bình',
+          ChartTheme.COLORS.indigo,
+          (ctx) => {
+            const stateCode = ctx.label;
+            const fullName = getFullStateName(stateCode);
+            const val = ctx.raw;
+            return `${fullName} (${stateCode}): ${window.LANG_MODE === 'EN' ? 'Avg' : 'TB'} ${val} ${window.LANG_MODE === 'EN' ? 'days' : 'ngày'}`;
+          }
+        );
+      }
+
+      // 4. Impact on Review (Bar Chart)
+      if (logData.impact) {
+        ChartTheme.createBarChart(
+          'impactChart',
+          logData.impact.labels,
+          logData.impact.data,
+          window.LANG_MODE === 'EN' ? 'Avg Review Score' : 'Điểm đánh giá TB',
+          ChartTheme.COLORS.pink
+        );
+      }
     }
   }
 
@@ -337,7 +475,14 @@
         'stateRevenueBar',
         top10.map(d => d.state),
         top10.map(d => d.revenue),
-        'Doanh Thu (BRL)'
+        window.CURRENCY_MODE === 'VND' ? 'Doanh Thu (VNĐ)' : 'Doanh Thu (BRL)',
+        null,
+        (ctx) => {
+          const stateCode = ctx.chart.data.labels[ctx.dataIndex];
+          const fullName = getFullStateName(stateCode);
+          const yVal = formatCurrency(ctx.raw);
+          return `${fullName}: Doanh thu ${yVal}`;
+        }
       );
     }
 
@@ -345,7 +490,7 @@
     if (geo.payments && geo.payments.length) {
       ChartTheme.createPie(
         'paymentPie',
-        geo.payments.map(d => d.method || 'N/A'),
+        geo.payments.map(d => translatePayment(d.method)),
         geo.payments.map(d => d.count)
       );
     }
@@ -363,7 +508,12 @@
     const grid = {};
     let maxVal = 0;
     data.forEach(d => {
-      const key = `${d.hour}-${d.day}`;
+      // PySpark dayofweek: 1=Sunday, 2=Monday, ..., 7=Saturday
+      // HTML columns: 0=Monday (T2), ..., 6=Sunday (CN)
+      let sparkDay = d.day;
+      let mappedDay = sparkDay === 1 ? 6 : sparkDay - 2;
+      
+      const key = `${d.hour}-${mappedDay}`;
       grid[key] = d.count || 0;
       if (grid[key] > maxVal) maxVal = grid[key];
     });
