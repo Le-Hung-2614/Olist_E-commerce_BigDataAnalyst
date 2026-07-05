@@ -1,0 +1,214 @@
+{
+  "timestamp": "2026-07-04T19:40:11.385174",
+  "source_dir": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\data",
+  "hdfs_target": "/user/bigdata/olist/bronze",
+  "files": {
+    "olist_orders_dataset.csv": {
+      "filename": "olist_orders_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\spark_jobs\\..\\data\\olist_orders_dataset.csv",
+      "valid": true,
+      "row_count": 99441,
+      "column_count": 8,
+      "columns": [
+        "order_id",
+        "customer_id",
+        "order_status",
+        "order_purchase_timestamp",
+        "order_approved_at",
+        "order_delivered_carrier_date",
+        "order_delivered_customer_date",
+        "order_estimated_delivery_date"
+      ],
+      "missing_columns": [],
+      "null_counts": {},
+      "duplicate_keys": 0,
+      "errors": [],
+      "file_size_mb": 16.84,
+      "hdfs_path": "/user/bigdata/olist/bronze/orders/olist_orders_dataset.csv",
+      "uploaded": true
+    },
+    "olist_order_items_dataset.csv": {
+      "filename": "olist_order_items_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\spark_jobs\\..\\data\\olist_order_items_dataset.csv",
+      "valid": true,
+      "row_count": 112650,
+      "column_count": 7,
+      "columns": [
+        "order_id",
+        "order_item_id",
+        "product_id",
+        "seller_id",
+        "shipping_limit_date",
+        "price",
+        "freight_value"
+      ],
+      "missing_columns": [],
+      "null_counts": {},
+      "duplicate_keys": 0,
+      "errors": [],
+      "file_size_mb": 14.72,
+      "hdfs_path": "/user/bigdata/olist/bronze/order_items/olist_order_items_dataset.csv",
+      "uploaded": true
+    },
+    "olist_order_payments_dataset.csv": {
+      "filename": "olist_order_payments_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\spark_jobs\\..\\data\\olist_order_payments_dataset.csv",
+      "valid": true,
+      "row_count": 103886,
+      "column_count": 5,
+      "columns": [
+        "order_id",
+        "payment_sequential",
+        "payment_type",
+        "payment_installments",
+        "payment_value"
+      ],
+      "missing_columns": [],
+      "null_counts": {},
+      "duplicate_keys": 0,
+      "errors": [],
+      "file_size_mb": 5.51,
+      "hdfs_path": "/user/bigdata/olist/bronze/order_payments/olist_order_payments_dataset.csv",
+      "uploaded": true
+    },
+    "olist_order_reviews_dataset.csv": {
+      "filename": "olist_order_reviews_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\spark_jobs\\..\\data\\olist_order_reviews_dataset.csv",
+      "valid": false,
+      "row_count": 99224,
+      "column_count": 7,
+      "columns": [
+        "review_id",
+        "order_id",
+        "review_score",
+        "review_comment_title",
+        "review_comment_message",
+        "review_creation_date",
+        "review_answer_timestamp"
+      ],
+      "missing_columns": [],
+      "null_counts": {},
+      "duplicate_keys": 814,
+      "errors": [
+        "Found 814 duplicate values in primary key 'review_id'"
+      ],
+      "file_size_mb": 13.78,
+      "hdfs_path": "/user/bigdata/olist/bronze/order_reviews/olist_order_reviews_dataset.csv",
+      "uploaded": true
+    },
+    "olist_customers_dataset.csv": {
+      "filename": "olist_customers_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\spark_jobs\\..\\data\\olist_customers_dataset.csv",
+      "valid": true,
+      "row_count": 99441,
+      "column_count": 5,
+      "columns": [
+        "customer_id",
+        "customer_unique_id",
+        "customer_zip_code_prefix",
+        "customer_city",
+        "customer_state"
+      ],
+      "missing_columns": [],
+      "null_counts": {},
+      "duplicate_keys": 0,
+      "errors": [],
+      "file_size_mb": 8.62,
+      "hdfs_path": "/user/bigdata/olist/bronze/customers/olist_customers_dataset.csv",
+      "uploaded": true
+    },
+    "olist_products_dataset.csv": {
+      "filename": "olist_products_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\spark_jobs\\..\\data\\olist_products_dataset.csv",
+      "valid": true,
+      "row_count": 32951,
+      "column_count": 9,
+      "columns": [
+        "product_id",
+        "product_category_name",
+        "product_name_lenght",
+        "product_description_lenght",
+        "product_photos_qty",
+        "product_weight_g",
+        "product_length_cm",
+        "product_height_cm",
+        "product_width_cm"
+      ],
+      "missing_columns": [],
+      "null_counts": {
+        "product_category_name": 610
+      },
+      "duplicate_keys": 0,
+      "errors": [],
+      "file_size_mb": 2.27,
+      "hdfs_path": "/user/bigdata/olist/bronze/products/olist_products_dataset.csv",
+      "uploaded": true
+    },
+    "olist_sellers_dataset.csv": {
+      "filename": "olist_sellers_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\spark_jobs\\..\\data\\olist_sellers_dataset.csv",
+      "valid": true,
+      "row_count": 3095,
+      "column_count": 4,
+      "columns": [
+        "seller_id",
+        "seller_zip_code_prefix",
+        "seller_city",
+        "seller_state"
+      ],
+      "missing_columns": [],
+      "null_counts": {},
+      "duplicate_keys": 0,
+      "errors": [],
+      "file_size_mb": 0.17,
+      "hdfs_path": "/user/bigdata/olist/bronze/sellers/olist_sellers_dataset.csv",
+      "uploaded": true
+    },
+    "olist_geolocation_dataset.csv": {
+      "filename": "olist_geolocation_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\spark_jobs\\..\\data\\olist_geolocation_dataset.csv",
+      "valid": true,
+      "row_count": 1000163,
+      "column_count": 5,
+      "columns": [
+        "geolocation_zip_code_prefix",
+        "geolocation_lat",
+        "geolocation_lng",
+        "geolocation_city",
+        "geolocation_state"
+      ],
+      "missing_columns": [],
+      "null_counts": {},
+      "duplicate_keys": 0,
+      "errors": [],
+      "file_size_mb": 58.44,
+      "hdfs_path": "/user/bigdata/olist/bronze/geolocation/olist_geolocation_dataset.csv",
+      "uploaded": true
+    },
+    "product_category_name_translation.csv": {
+      "filename": "product_category_name_translation.csv",
+      "filepath": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\spark_jobs\\..\\data\\product_category_name_translation.csv",
+      "valid": true,
+      "row_count": 71,
+      "column_count": 2,
+      "columns": [
+        "product_category_name",
+        "product_category_name_english"
+      ],
+      "missing_columns": [],
+      "null_counts": {},
+      "duplicate_keys": 0,
+      "errors": [],
+      "file_size_mb": 0.0,
+      "hdfs_path": "/user/bigdata/olist/bronze/category_translation/product_category_name_translation.csv",
+      "uploaded": true
+    }
+  },
+  "summary": {
+    "total_files": 9,
+    "valid_files": 8,
+    "uploaded_files": 9,
+    "total_rows": 1550922,
+    "duration_seconds": 119.9
+  }
+}

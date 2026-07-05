@@ -1,39 +1,33 @@
 """
-Olist E-Commerce Big Data Dashboard — Flask Application (FIXED)
+Olist E-Commerce Big Data Dashboard — Flask Application
+Query data from MongoDB (Denormalized Star Schema).
 """
-import os
-
 from flask import Flask, render_template, jsonify, request
 from pymongo import MongoClient
-from requests import __build__
 from config import Config
 from bson import json_util
 import json
 import math
+import os
 from datetime import datetime
-import joblib
-import numpy as np
 
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# ── MongoDB Connection ────────────────────────────────────────────────
+# -- MongoDB Connection --
 client = MongoClient(app.config["MONGO_URI"])
 db = client[app.config["DATABASE_NAME"]]
 
-# Collections
-orders_col      = db["orders"]
-customers_col   = db["customers"]
-products_col    = db["products"]
-sellers_col     = db["sellers"]
-agg_col         = db["aggregations"]
+orders_col = db["orders"]
+customers_col = db["customers"]
+products_col = db["products"]
+sellers_col = db["sellers"]
+agg_col = db["aggregations"]
 
 
-# ══════════════════════════════════════════════════════════════════════
-#  HELPER
-# ══════════════════════════════════════════════════════════════════════
+# -- Helpers --
 def _json(data):
-    """Serialize MongoDB results (handles ObjectId, datetime, etc.)."""
+    """Serialize MongoDB results (handles ObjectId, datetime)."""
     return json.loads(json_util.dumps(data))
 
 
@@ -46,9 +40,85 @@ def _safe_round(val, n=2):
         return 0
 
 
-# ══════════════════════════════════════════════════════════════════════
-#  PAGE ROUTES
-# ══════════════════════════════════════════════════════════════════════
+# -- Vietnamese Category Translation --
+CATEGORY_VI = {
+    "health_beauty": "Suc khoe & Lam dep",
+    "watches_gifts": "Dong ho & Qua tang",
+    "bed_bath_table": "Giuong, Phong tam & Ban",
+    "sports_leisure": "The thao & Giai tri",
+    "computers_accessories": "May tinh & Phu kien",
+    "furniture_decor": "Noi that & Trang tri",
+    "housewares": "Do gia dung",
+    "cool_stuff": "Do hay",
+    "garden_tools": "Dung cu vuon",
+    "auto": "O to & Phu tung",
+    "toys": "Do choi",
+    "baby": "Do tre em",
+    "perfumery": "Nuoc hoa",
+    "telephony": "Dien thoai",
+    "stationery": "Van phong pham",
+    "electronics": "Dien tu",
+    "fashion_bags_accessories": "Tui & Phu kien thoi trang",
+    "fashion_shoes": "Giay dep",
+    "fashion_underwear_beach": "Do lot & Do boi",
+    "fashion_sport": "Thoi trang the thao",
+    "consoles_games": "May choi game",
+    "audio": "Am thanh",
+    "food_drink": "Thuc pham & Do uong",
+    "books_general_interest": "Sach tong hop",
+    "books_technical": "Sach ky thuat",
+    "books_imported": "Sach nhap khau",
+    "construction_tools_construction": "Dung cu xay dung",
+    "construction_tools_safety": "Dung cu an toan",
+    "costruction_tools_tools": "Dung cu xay dung",
+    "construction_tools_lights": "Den xay dung",
+    "small_appliances": "Thiet bi nho",
+    "small_appliances_home_oven_and_coffee": "Lo & May pha ca phe",
+    "pet_shop": "Thu cung",
+    "office_furniture": "Noi that van phong",
+    "industry_commerce_and_business": "Cong nghiep & Thuong mai",
+    "fixed_telephony": "Dien thoai ban",
+    "luggage_accessories": "Hanh ly & Phu kien",
+    "air_conditioning": "Dieu hoa",
+    "kitchen_dining_laundry_garden_furniture": "Noi that bep & Vuon",
+    "musical_instruments": "Nhac cu",
+    "signaling_and_security": "An ninh & Bao hieu",
+    "computers": "May tinh",
+    "christmas_supplies": "Do Giang sinh",
+    "home_appliances": "Thiet bi gia dung",
+    "home_appliances_2": "Thiet bi gia dung 2",
+    "home_comfort": "Tien nghi gia dinh",
+    "home_comfort_2": "Tien nghi gia dinh 2",
+    "home_confort": "Tien nghi gia dinh",
+    "flowers": "Hoa",
+    "market_place": "San thuong mai",
+    "diapers_and_hygiene": "Ta & Ve sinh",
+    "drinks": "Do uong",
+    "food": "Thuc pham",
+    "tablets_printing_image": "May tinh bang & In an",
+    "cds_dvds_musicals": "CD/DVD/Nhac",
+    "arts_and_craftmanship": "Nghe thuat & Thu cong",
+    "la_cuisine": "Nha bep",
+    "furniture_living_room": "Noi that phong khach",
+    "furniture_bedroom": "Noi that phong ngu",
+    "furniture_mattress_and_upholstery": "Nem & Boc ghe",
+    "agro_industry_and_commerce": "Nong nghiep & Thuong mai",
+    "party_supplies": "Do tiec",
+    "security_and_services": "An ninh & Dich vu",
+    "fashion_male_clothing": "Thoi trang nam",
+    "fashion_female_clothing": "Thoi trang nu",
+    "fashion_childrens_clothes": "Thoi trang tre em",
+    "cine_photo": "Phim & Anh",
+    "home_construction": "Xay dung nha",
+}
+
+def translate_category(name):
+    """Translate English category name to Vietnamese."""
+    if not name:
+        return "Khong xac dinh"
+    return CATEGORY_VI.get(name, name.replace("_", " ").title())
+
+
 @app.route("/")
 def index():
     return render_template("dashboard.html", page="overview")
@@ -62,7 +132,7 @@ def churn():
     return render_template("churn.html", page="churn")
 
 @app.route("/products")
-def products():
+def products_page():
     return render_template("products.html", page="products")
 
 @app.route("/geographic")
@@ -74,9 +144,9 @@ def models():
     return render_template("models.html", page="models")
 
 
-# ══════════════════════════════════════════════════════════════════════
-#  API — Overview KPIs
-# ══════════════════════════════════════════════════════════════════════
+# ====================================================================
+#  API - Overview KPIs
+# ====================================================================
 @app.route("/api/overview")
 def api_overview():
     try:
@@ -88,12 +158,35 @@ def api_overview():
         ]))
         total_revenue = _safe_round(rev_result[0]["total"]) if rev_result else 0
 
-        
+        # Avg review - try nested review.review_score with $toDouble cast
         review_result = list(orders_col.aggregate([
-            {"$match": {"review.review_score": {"$exists": True, "$gt": 0}}},
-            {"$group": {"_id": None, "avg": {"$avg": "$review.review_score"}}}
+            {"$match": {"review.review_score": {"$exists": True, "$ne": None}}},
+            {"$project": {"_score": {"$toDouble": "$review.review_score"}}},
+            {"$match": {"_score": {"$gt": 0}}},
+            {"$group": {"_id": None, "avg": {"$avg": "$_score"}}}
         ]))
         avg_review = _safe_round(review_result[0]["avg"]) if review_result else 0
+
+        # Fallback: flat review_score field
+        if avg_review == 0:
+            review_result2 = list(orders_col.aggregate([
+                {"$match": {"review_score": {"$exists": True, "$ne": None}}},
+                {"$project": {"_score": {"$toDouble": "$review_score"}}},
+                {"$match": {"_score": {"$gt": 0}}},
+                {"$group": {"_id": None, "avg": {"$avg": "$_score"}}}
+            ]))
+            avg_review = _safe_round(review_result2[0]["avg"]) if review_result2 else 0
+
+        # Fallback: compute from aggregations collection
+        if avg_review == 0:
+            agg_rev = list(agg_col.find(
+                {"agg_type": "category_stats", "avg_review_score": {"$gt": 0}},
+                {"_id": 0, "avg_review_score": 1}
+            ))
+            if agg_rev:
+                scores = [float(d["avg_review_score"]) for d in agg_rev
+                         if d.get("avg_review_score")]
+                avg_review = _safe_round(sum(scores) / len(scores)) if scores else 0
 
         total_sellers = sellers_col.count_documents({})
 
@@ -102,106 +195,96 @@ def api_overview():
             "total_orders": total_orders,
             "avg_review": avg_review,
             "total_customers": total_customers,
-            "total_sellers": total_sellers
+            "total_sellers": total_sellers,
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
- 
-# ══════════════════════════════════════════════════════════════════════
-#  API — Monthly Revenue
-# ══════════════════════════════════════════════════════════════════════
+
+# ====================================================================
+#  API - Monthly Revenue
+# ====================================================================
 @app.route("/api/revenue")
 def api_revenue():
     try:
-        # FIX BUG 4: aggregations collection không có wrapper {data: [...]}.
-        # Mỗi document là 1 row, có agg_type + các field riêng.
-        # Phải find nhiều documents thay vì find_one rồi lấy doc["data"].
         docs = list(agg_col.find(
             {"agg_type": "monthly_revenue"},
             {"_id": 0, "purchase_year_month": 1, "total_revenue": 1, "order_count": 1}
         ).sort("purchase_year_month", 1))
 
         if docs:
-            data = [{
-                "month": d.get("purchase_year_month", ""),
-                "revenue": _safe_round(d.get("total_revenue", 0)),
-                "orders": d.get("order_count", 0)
-            } for d in docs if d.get("purchase_year_month")]
-            return jsonify({"data": data})
+            data = [{"month": d.get("purchase_year_month"),
+                     "revenue": _safe_round(d.get("total_revenue", 0)),
+                     "orders": d.get("order_count", 0)} for d in docs]
+        else:
+            pipeline = [
+                {"$group": {
+                    "_id": {"$substr": ["$order_purchase_timestamp", 0, 7]},
+                    "revenue": {"$sum": "$order_value"},
+                    "orders": {"$sum": 1}
+                }},
+                {"$sort": {"_id": 1}}
+            ]
+            result = list(orders_col.aggregate(pipeline))
+            data = [{"month": r["_id"], "revenue": _safe_round(r["revenue"]),
+                     "orders": r["orders"]} for r in result if r["_id"]]
 
-        # Fallback: tính từ orders — dùng field đúng purchase_year_month
-        pipeline = [
-            {"$group": {
-                "_id": "$purchase_year_month",
-                "revenue": {"$sum": "$order_value"},
-                "orders": {"$sum": 1}
-            }},
-            {"$sort": {"_id": 1}}
-        ]
-        result = list(orders_col.aggregate(pipeline))
-        data = [{"month": r["_id"], "revenue": _safe_round(r["revenue"]),
-                 "orders": r["orders"]} for r in result if r["_id"]]
         return jsonify({"data": data})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-# ══════════════════════════════════════════════════════════════════════
-#  API — Category Stats
-# ══════════════════════════════════════════════════════════════════════
+# ====================================================================
+#  API - Category Stats
+# ====================================================================
 @app.route("/api/categories")
 def api_categories():
     try:
-        # FIX BUG 4 + 7: aggregations dùng flat rows, field là "main_category_english"
         docs = list(agg_col.find(
             {"agg_type": "category_stats"},
-            {"_id": 0, "main_category_english": 1, "total_revenue": 1,
-             "total_items_sold": 1, "avg_order_value": 1, "avg_review_score": 1}
-        ).sort("total_revenue", -1))
+            {"_id": 0}
+        ).sort("total_revenue", -1).limit(20))
 
         if docs:
             data = [{
-                "category": d.get("main_category_english") or "Unknown",
+                "category": translate_category(d.get("main_category_english") or "Unknown"),
                 "revenue": _safe_round(d.get("total_revenue", 0)),
-                "total_sold": int(d.get("total_items_sold") or 0),
+                "total_sold": int(d.get("order_count") or 0),
                 "avg_price": _safe_round(d.get("avg_order_value", 0)),
-                "avg_review": _safe_round(d.get("avg_review_score", 0))
+                "avg_review": _safe_round(d.get("avg_review_score", 0)),
             } for d in docs]
-            return jsonify({"data": data})
+        else:
+            pipeline = [
+                {"$group": {
+                    "_id": "$category_en",
+                    "total_sold": {"$sum": {"$toDouble": "$total_orders"}},
+                    "total_revenue": {"$sum": {"$toDouble": "$total_revenue"}},
+                    "avg_price": {"$avg": {"$toDouble": "$avg_price"}},
+                    "avg_review": {"$avg": {"$toDouble": "$avg_review_score"}}
+                }},
+                {"$sort": {"total_sold": -1}},
+                {"$limit": 20}
+            ]
+            result = list(products_col.aggregate(pipeline))
+            data = [{
+                "category": translate_category(r["_id"] or "Unknown"),
+                "revenue": _safe_round(r.get("total_revenue", 0)),
+                "total_sold": int(r.get("total_sold") or 0),
+                "avg_price": _safe_round(r.get("avg_price", 0)),
+                "avg_review": _safe_round(r.get("avg_review", 0)),
+            } for r in result]
 
-        # Fallback từ orders — dùng nested items.category
-        pipeline = [
-            {"$group": {
-                "_id": "$items.category",
-                "total_revenue": {"$sum": "$order_value"},
-                "order_count": {"$sum": 1},
-                "avg_price": {"$avg": "$order_value"},
-                "avg_review": {"$avg": "$review.review_score"}
-            }},
-            {"$sort": {"total_revenue": -1}},
-            {"$limit": 20}
-        ]
-        result = list(orders_col.aggregate(pipeline))
-        data = [{
-            "category": r["_id"] or "Unknown",
-            "revenue": _safe_round(r.get("total_revenue", 0)),
-            "total_sold": int(r.get("order_count") or 0),
-            "avg_price": _safe_round(r.get("avg_price", 0)),
-            "avg_review": _safe_round(r.get("avg_review", 0))
-        } for r in result]
         return jsonify({"data": data})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-# ══════════════════════════════════════════════════════════════════════
-#  API — Customer Segments
-# ══════════════════════════════════════════════════════════════════════
+# ====================================================================
+#  API - Customer Segments
+# ====================================================================
 @app.route("/api/segments")
 def api_segments():
     try:
-        # FIX BUG 4 + 6: aggregations dùng flat rows, field là "customer_count"
         seg_docs = list(agg_col.find(
             {"agg_type": "segment_stats"},
             {"_id": 0, "segment_name": 1, "customer_count": 1}
@@ -219,7 +302,6 @@ def api_segments():
             distribution = [{"segment": r["_id"] or "Unknown", "count": r["count"]}
                            for r in result]
 
-        # RFM scatter — flat fields đúng
         rfm_pipeline = [
             {"$match": {"recency": {"$exists": True}}},
             {"$sample": {"size": 500}},
@@ -227,14 +309,11 @@ def api_segments():
                 "_id": 0,
                 "customer_id": "$customer_unique_id",
                 "segment": "$segment_name",
-                "recency": 1,
-                "frequency": 1,
-                "monetary": 1
+                "recency": 1, "frequency": 1, "monetary": 1
             }}
         ]
         rfm_data = list(customers_col.aggregate(rfm_pipeline))
 
-        # Top customers per segment
         top_pipeline = [
             {"$match": {"monetary": {"$exists": True}}},
             {"$sort": {"monetary": -1}},
@@ -245,9 +324,7 @@ def api_segments():
                 "segment": "$segment_name",
                 "city": "$customer_city",
                 "state": "$customer_state",
-                "recency": 1,
-                "frequency": 1,
-                "monetary": 1
+                "recency": 1, "frequency": 1, "monetary": 1
             }}
         ]
         top_customers = list(customers_col.aggregate(top_pipeline))
@@ -255,26 +332,22 @@ def api_segments():
         return jsonify({
             "distribution": _json(distribution),
             "rfm": _json(rfm_data),
-            "top_customers": _json(top_customers)
+            "top_customers": _json(top_customers),
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-# ══════════════════════════════════════════════════════════════════════
-#  API — Churn Analysis
-# ══════════════════════════════════════════════════════════════════════
+# ====================================================================
+#  API - Churn Analysis
+# ====================================================================
 @app.route("/api/churn")
 def api_churn():
     try:
         total = customers_col.count_documents({})
-
-        # FIX BUG 5: churn_prediction là float (0.0/1.0), không phải string "1.0"/"0.0"
-        # Dùng $in để bắt cả int 1 lẫn float 1.0
         churned = customers_col.count_documents({"churn_prediction": {"$in": [1, 1.0]}})
         churn_rate = _safe_round(churned / total * 100 if total else 0)
 
-        # Churn by segment — FIX: churn_prediction là số
         pipeline = [
             {"$group": {
                 "_id": "$segment_name",
@@ -292,20 +365,17 @@ def api_churn():
             "total": r["total"],
             "churned": r["churned"],
             "churn_rate": _safe_round(r["churned"] / r["total"] * 100 if r["total"] else 0),
-            "avg_prob": _safe_round(r.get("avg_prob") or 0)
+            "avg_prob": _safe_round(r.get("avg_prob") or 0),
         } for r in by_segment]
 
-        # Top 10 high-risk — churn_probability là float
         high_risk = list(customers_col.aggregate([
             {"$match": {"churn_probability": {"$exists": True, "$gt": 0}}},
             {"$sort": {"churn_probability": -1}},
             {"$limit": 10},
             {"$project": {"_id": 0, "customer_unique_id": 1, "segment_name": 1,
-                          "churn_probability": 1, "customer_city": 1, "customer_state": 1,
-                          "monetary": 1, "recency": 1}}
+                          "churn_probability": 1, "customer_city": 1,
+                          "customer_state": 1, "monetary": 1, "recency": 1}}
         ]))
-
-        # FIX BUG 9: high_risk_clean dùng trực tiếp monetary/recency (không qua rfm)
         high_risk_clean = [{
             "customer_id": r.get("customer_unique_id", ""),
             "segment": r.get("segment_name", ""),
@@ -313,24 +383,55 @@ def api_churn():
             "city": r.get("customer_city", ""),
             "state": r.get("customer_state", ""),
             "monetary": _safe_round(float(r.get("monetary", 0) or 0)),
-            "recency": int(float(r.get("recency", 0) or 0))
+            "recency": int(float(r.get("recency", 0) or 0)),
         } for r in high_risk]
 
-        # FIX BUG 4: model_performance cũng flat rows
         model_docs = list(agg_col.find({"agg_type": "model_performance"}))
         model_comparison = {}
         if model_docs:
-            models_list = []
+            flat_models = []
             for doc in model_docs:
                 metrics_raw = doc.get("metrics_json", "{}")
                 try:
                     metrics = json.loads(metrics_raw) if isinstance(metrics_raw, str) else metrics_raw
                 except Exception:
                     metrics = {}
-                if isinstance(metrics, dict) and metrics:
-                    models_list.append(metrics)
-            if models_list:
-                model_comparison = {"models": models_list}
+                if not isinstance(metrics, dict) or not metrics:
+                    continue
+
+                # Extract sub-models from nested 'models' dict
+                sub_models = metrics.get("models", {})
+                best_key = metrics.get("best_model", "")
+
+                if isinstance(sub_models, dict) and sub_models:
+                    for sub_name, sub_m in sub_models.items():
+                        if not isinstance(sub_m, dict):
+                            continue
+                        # Skip regression-only (rmse without auc)
+                        if "rmse" in sub_m and "auc_roc" not in sub_m:
+                            continue
+                        flat_models.append({
+                            "name": sub_name + (" *" if sub_name == best_key else ""),
+                            "accuracy": sub_m.get("accuracy", 0),
+                            "precision": sub_m.get("precision", 0),
+                            "recall": sub_m.get("recall", 0),
+                            "f1": sub_m.get("f1_score", 0),
+                            "auc": sub_m.get("auc_roc", 0),
+                        })
+                elif metrics.get("accuracy") or metrics.get("auc_roc"):
+                    # Flat model format (direct metrics at top level)
+                    model_name = doc.get("model_name") or metrics.get("model_name", "Model")
+                    flat_models.append({
+                        "name": model_name,
+                        "accuracy": metrics.get("accuracy", 0),
+                        "precision": metrics.get("precision", 0),
+                        "recall": metrics.get("recall", 0),
+                        "f1": metrics.get("f1_score", 0),
+                        "auc": metrics.get("auc_roc", 0),
+                    })
+
+            if flat_models:
+                model_comparison = {"models": flat_models}
 
         return jsonify({
             "churn_rate": churn_rate,
@@ -338,19 +439,18 @@ def api_churn():
             "churned": churned,
             "by_segment": _json(segment_data),
             "high_risk": high_risk_clean,
-            "model_comparison": model_comparison
+            "model_comparison": model_comparison,
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-# ══════════════════════════════════════════════════════════════════════
-#  API — Reviews (score distribution)
-# ══════════════════════════════════════════════════════════════════════
+# ====================================================================
+#  API - Reviews
+# ====================================================================
 @app.route("/api/reviews")
 def api_reviews():
     try:
-        # FIX BUG 2: review là nested struct, dùng review.review_score
         pipeline = [
             {"$match": {"review.review_score": {"$exists": True, "$gt": 0}}},
             {"$group": {"_id": "$review.review_score", "count": {"$sum": 1}}},
@@ -364,13 +464,12 @@ def api_reviews():
         return jsonify({"error": str(e)}), 500
 
 
-# ══════════════════════════════════════════════════════════════════════
-#  API — Geographic Stats
-# ══════════════════════════════════════════════════════════════════════
+# ====================================================================
+#  API - Geographic
+# ====================================================================
 @app.route("/api/geo")
 def api_geo():
     try:
-        # FIX BUG 4 + 8: aggregations flat rows, field là "customer_state"
         state_docs = list(agg_col.find(
             {"agg_type": "state_stats"},
             {"_id": 0, "customer_state": 1, "total_revenue": 1, "order_count": 1}
@@ -380,7 +479,7 @@ def api_geo():
             states = [{
                 "state": d.get("customer_state") or "Unknown",
                 "revenue": _safe_round(d.get("total_revenue", 0)),
-                "orders": d.get("order_count", 0)
+                "orders": d.get("order_count", 0),
             } for d in state_docs]
         else:
             pipeline = [
@@ -397,19 +496,14 @@ def api_geo():
                        "revenue": _safe_round(r.get("revenue", 0)),
                        "orders": r["orders"]} for r in result]
 
-        # Hourly orders — FIX BUG 4: flat rows với purchase_dayofweek, purchase_hour
         hourly_docs = list(agg_col.find(
             {"agg_type": "hourly_orders"},
             {"_id": 0, "purchase_dayofweek": 1, "purchase_hour": 1, "order_count": 1}
         ))
-        if hourly_docs:
-            heatmap = [{"day": d.get("purchase_dayofweek", 0),
-                        "hour": d.get("purchase_hour", 0),
-                        "count": d.get("order_count", 0)} for d in hourly_docs]
-        else:
-            heatmap = []
+        heatmap = [{"day": d.get("purchase_dayofweek", 0),
+                    "hour": d.get("purchase_hour", 0),
+                    "count": d.get("order_count", 0)} for d in hourly_docs] if hourly_docs else []
 
-        # FIX BUG 4: payment_methods — flat rows với payment_type, order_count, total_revenue
         payment_docs = list(agg_col.find(
             {"agg_type": "payment_methods"},
             {"_id": 0, "payment_type": 1, "order_count": 1, "total_revenue": 1}
@@ -419,10 +513,9 @@ def api_geo():
             payments = [{
                 "method": d.get("payment_type") or "Unknown",
                 "count": d.get("order_count", 0),
-                "total": _safe_round(d.get("total_revenue", 0))
+                "total": _safe_round(d.get("total_revenue", 0)),
             } for d in payment_docs]
         else:
-            # Fallback: từ orders dùng nested payment.payment_type
             pipeline = [
                 {"$match": {"payment.payment_type": {"$exists": True}}},
                 {"$group": {
@@ -439,15 +532,15 @@ def api_geo():
         return jsonify({
             "states": states,
             "heatmap": heatmap,
-            "payments": payments
+            "payments": payments,
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-# ══════════════════════════════════════════════════════════════════════
-#  API — ML Model Performance
-# ══════════════════════════════════════════════════════════════════════
+# ====================================================================
+#  API - ML Model Performance
+# ====================================================================
 def build_feature_importance(metrics):
     fi = metrics.get("feature_importance", {})
     if isinstance(fi, dict):
@@ -473,7 +566,6 @@ def api_models():
             sub_models = metrics.get("models", {})
             best_key = metrics.get("best_model", "")
 
-            # Build confusion matrix từ dict → [[TN,FP],[FN,TP]]
             cm_raw = metrics.get("confusion_matrix", {})
             cm = None
             if isinstance(cm_raw, dict) and cm_raw:
@@ -489,13 +581,13 @@ def api_models():
                 if "rmse" in sub_m and "auc_roc" not in sub_m:
                     continue
                 models_list.append({
-                    "name": sub_name + (" ★" if sub_name == best_key else ""),
-                    "accuracy":  sub_m.get("accuracy",  sub_m.get("r2", 0)),
+                    "name": sub_name + (" *" if sub_name == best_key else ""),
+                    "accuracy": sub_m.get("accuracy", sub_m.get("r2", 0)),
                     "precision": sub_m.get("precision"),
-                    "recall":    sub_m.get("recall"),
-                    "f1":        sub_m.get("f1_score"),
-                    "auc":       sub_m.get("auc_roc"),
-                    "rmse":      sub_m.get("rmse"),
+                    "recall": sub_m.get("recall"),
+                    "f1": sub_m.get("f1_score"),
+                    "auc": sub_m.get("auc_roc"),
+                    "rmse": sub_m.get("rmse"),
                     "confusion_matrix": cm,
                     "feature_importance": build_feature_importance(metrics),
                 })
@@ -503,7 +595,6 @@ def api_models():
         if models_list:
             return jsonify({"models": models_list})
 
-        # Fallback defaults
         return jsonify({"models": [
             {"name": "Random Forest", "accuracy": 0.87, "precision": 0.85,
              "recall": 0.82, "f1": 0.83, "auc": 0.91, "rmse": None,
@@ -511,71 +602,58 @@ def api_models():
              "feature_importance": [
                  {"feature": "recency", "importance": 0.32},
                  {"feature": "monetary", "importance": 0.25},
-                 {"feature": "frequency", "importance": 0.18},
              ]},
-            {"name": "Logistic Regression", "accuracy": 0.82, "precision": 0.80,
-             "recall": 0.78, "f1": 0.79, "auc": 0.86, "rmse": None,
-             "confusion_matrix": None, "feature_importance": []}
         ]})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-# ══════════════════════════════════════════════════════════════════════
-#  API — Predict Churn
-# ══════════════════════════════════════════════════════════════════════
-
+# ====================================================================
+#  API - Predict Churn
+# ====================================================================
 @app.route("/api/predict", methods=["POST"])
 def api_predict():
     try:
-        data          = request.get_json(force=True)
-        frequency     = float(data.get("frequency", 1))
-        monetary      = float(data.get("monetary", 0))
-        review_score  = float(data.get("review_score", 5))
-        delivery_days = float(data.get("delivery_days", 10))
+        data = request.get_json(force=True)
+        frequency = float(data.get("frequency", 1))
+        monetary = float(data.get("monetary", 0))
 
-        model_path = os.path.join(
-            os.path.dirname(__file__), "..",
-            "tmp_models", "churn_prediction.joblib"
-        )
-        saved    = joblib.load(model_path)
-        scaler   = saved["scaler"]
-        model    = saved["model"]
-
-        features = np.array([[
-            frequency, monetary,
-            1.0, monetary, 0.15,
-            review_score, delivery_days, 1.0,
-        ]])
-        prob = float(model.predict_proba(scaler.transform(features))[0][1])
+        result = list(customers_col.aggregate([
+            {"$match": {
+                "frequency": {"$gte": frequency - 1, "$lte": frequency + 1},
+                "monetary": {"$gte": monetary * 0.7, "$lte": monetary * 1.3},
+            }},
+            {"$group": {
+                "_id": None,
+                "avg_prob": {"$avg": "$churn_probability"},
+            }}
+        ]))
+        prob = float(result[0]["avg_prob"]) if result and result[0].get("avg_prob") else 0.5
 
         return jsonify({
             "probability": round(prob, 3),
-            "label": "Có nguy cơ rời bỏ" if prob >= 0.5 else "Có khả năng ở lại",
+            "label": "High churn risk" if prob >= 0.5 else "Likely to stay",
             "risk_level": (
-                "Rất cao" if prob >= 0.8 else
-                "Cao" if prob >= 0.6 else
-                "Trung bình" if prob >= 0.4 else
-                "Thấp" if prob >= 0.2 else "Rất thấp"
+                "Very High" if prob >= 0.8 else
+                "High" if prob >= 0.6 else
+                "Medium" if prob >= 0.4 else
+                "Low" if prob >= 0.2 else "Very Low"
             ),
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-# ══════════════════════════════════════════════════════════════════════
-#  Error Handlers
-# ══════════════════════════════════════════════════════════════════════
+# -- Error Handlers --
 @app.errorhandler(404)
 def not_found(e):
     return render_template("base.html", page="404",
-                           error_message="Trang không tồn tại"), 404
+                           error_message="Page not found"), 404
 
 @app.errorhandler(500)
 def server_error(e):
-    return jsonify({"error": "Lỗi máy chủ nội bộ"}), 500
+    return jsonify({"error": "Internal server error"}), 500
 
 
-# ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)

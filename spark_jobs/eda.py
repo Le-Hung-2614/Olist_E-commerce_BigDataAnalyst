@@ -43,7 +43,8 @@ logger = logging.getLogger("OlistEDA")
 # ============================================================================
 # Đường dẫn HDFS
 # ============================================================================
-HDFS_PROCESSED_PATH = "hdfs://localhost:9000/user/bigdata/olist/processed"
+HDFS_SILVER = "hdfs://localhost:9000/user/bigdata/olist/silver"
+HDFS_GOLD = "hdfs://localhost:9000/user/bigdata/olist/gold"
 HDFS_EDA_PATH = "hdfs://localhost:9000/user/bigdata/olist/eda_results"
 HDFS_EDA_PATH_CLI = "/user/bigdata/olist/eda_results"
 HDFS_CLI_CMD = ["C:/hadoop/bin/hadoop.cmd", "dfs"]
@@ -103,11 +104,11 @@ def create_spark_session():
 def load_processed_data(spark):
     """Đọc dữ liệu đã xử lý từ HDFS."""
     logger.info("Đang đọc dữ liệu merged_orders từ HDFS...")
-    merged_df = spark.read.parquet(f"{HDFS_PROCESSED_PATH}/merged_orders")
+    merged_df = spark.read.parquet(f"{HDFS_SILVER}/merged_orders")
     logger.info(f"  -> Đã đọc: {merged_df.count():,} dòng, {len(merged_df.columns)} cột")
 
     logger.info("Đang đọc dữ liệu rfm_customers từ HDFS...")
-    rfm_df = spark.read.parquet(f"{HDFS_PROCESSED_PATH}/rfm_customers")
+    rfm_df = spark.read.parquet(f"{HDFS_GOLD}/rfm_customers")
     logger.info(f"  -> Đã đọc: {rfm_df.count():,} dòng")
 
     return merged_df, rfm_df

@@ -137,14 +137,14 @@ const ChartTheme = (() => {
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: (c) => `${c.dataset.label}: R$ ${formatNumber(c.raw)}`,
+              label: (c) => `${c.dataset.label}: ${formatNumber(c.raw)} BRL`,
             },
           },
         },
         scales: {
           y: {
             ticks: {
-              callback: (v) => 'R$ ' + formatCompact(v),
+              callback: (v) => formatCompact(v) + ' BRL',
             },
           },
         },
@@ -420,7 +420,7 @@ const ChartTheme = (() => {
 
   function formatNumber(n) {
     if (n == null) return '0';
-    return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    return Number(n).toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   }
 
   function formatCompact(n) {

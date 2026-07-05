@@ -23,6 +23,9 @@ import json
 import logging
 from datetime import datetime
 
+# ==========================================================================
+# Buoc PySpark dung Python 3.12 (Python 3.13 khong tuong thich)
+# ==========================================================================
 PYTHON_PATH = "C:/Users/Admin/AppData/Local/Programs/Python/Python312/python.exe"
 os.environ["PYSPARK_PYTHON"] = PYTHON_PATH
 os.environ["PYSPARK_DRIVER_PYTHON"] = PYTHON_PATH
@@ -59,12 +62,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger("OlistML")
 
-HDFS_PROCESSED = "hdfs://localhost:9000/user/bigdata/olist/processed"
+HDFS_SILVER = "hdfs://localhost:9000/user/bigdata/olist/silver"
+HDFS_GOLD = "hdfs://localhost:9000/user/bigdata/olist/gold"
 HDFS_MODELS = "hdfs://localhost:9000/user/bigdata/olist/models"
 
 
 # ==========================================================================
-# Tao SparkSession 
+# Tao SparkSession - toi uu cho may yeu + tranh loi socket Windows
 # ==========================================================================
 def create_spark_session():
     """
@@ -103,8 +107,8 @@ def load_data(spark):
     """Doc du lieu da xu ly tu HDFS (output cua etl.py)."""
     logger.info("Dang doc du lieu tu HDFS...")
 
-    merged_df = spark.read.parquet(f"{HDFS_PROCESSED}/merged_orders")
-    rfm_df = spark.read.parquet(f"{HDFS_PROCESSED}/rfm_customers")
+    merged_df = spark.read.parquet(f"{HDFS_SILVER}/merged_orders")
+    rfm_df = spark.read.parquet(f"{HDFS_GOLD}/rfm_customers")
 
     # count() tra ve long qua Py4J — khong can Python workers
     merged_count = merged_df.count()
@@ -213,7 +217,7 @@ def train_kmeans_segmentation(rfm_df, spark):
     logger.info(f"  Da luu model tai: {model_path}")
 
     # --- Luu ket qua phan cum len HDFS (Parquet) ---
-    output_path = f"{HDFS_PROCESSED}/customer_segments"
+    output_path = f"{HDFS_GOLD}/customer_segments"
     (
         segmented_df
         .select(
@@ -426,7 +430,7 @@ def train_churn_prediction(merged_df, rfm_df, spark):
             "churn_probability",
         )
     )
-    output_path = f"{HDFS_PROCESSED}/churn_predictions"
+    output_path = f"{HDFS_GOLD}/churn_predictions"
     churn_output.coalesce(2).write.mode("overwrite").parquet(output_path)
     logger.info(f"  Da luu predictions tai: {output_path}")
 

@@ -19,15 +19,15 @@
   }
 
   function formatCurrency(n) {
-    if (n == null) return 'R$ 0';
-    if (n >= 1e6) return 'R$ ' + (n / 1e6).toFixed(2) + 'M';
-    if (n >= 1e3) return 'R$ ' + (n / 1e3).toFixed(1) + 'K';
-    return 'R$ ' + Number(n).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+    if (n == null) return '0 BRL';
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M BRL';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K BRL';
+    return Number(n).toLocaleString('vi-VN', { maximumFractionDigits: 0 }) + ' BRL';
   }
 
   function formatInt(n) {
     if (n == null) return '0';
-    return Number(n).toLocaleString('pt-BR');
+    return Number(n).toLocaleString('vi-VN');
   }
 
   function formatPct(n) {
@@ -43,7 +43,7 @@
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
       const current = Math.round(start + (end - start) * eased);
-      el.textContent = prefix + current.toLocaleString('pt-BR') + suffix;
+      el.textContent = prefix + current.toLocaleString('vi-VN') + suffix;
       if (progress < 1) requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
@@ -87,9 +87,9 @@
       const custEl = document.getElementById('kpiCustomers');
 
       if (kpi.total_revenue >= 1e6) {
-        animateValue(revEl, Math.round(kpi.total_revenue / 1e6), 1400, 'R$ ', 'M');
+        animateValue(revEl, Math.round(kpi.total_revenue / 1e6), 1400, '', 'M BRL');
       } else {
-        animateValue(revEl, Math.round(kpi.total_revenue / 1e3), 1400, 'R$ ', 'K');
+        animateValue(revEl, Math.round(kpi.total_revenue / 1e3), 1400, '', 'K BRL');
       }
       animateValue(ordEl, kpi.total_orders, 1200);
       revwEl.textContent = Number(kpi.avg_review).toFixed(2) + ' ⭐';
@@ -112,7 +112,7 @@
         'categoryChart',
         top10.map(d => truncate(d.category, 18)),
         top10.map(d => d.revenue),
-        'Doanh Thu (R$)'
+        'Doanh Thu (BRL)'
       );
     }
   }
@@ -153,7 +153,7 @@
         pointHoverRadius: 7,
       }));
 
-      ChartTheme.createScatter('rfmScatter', datasets, 'Recency (ngày)', 'Monetary (R$)');
+      ChartTheme.createScatter('rfmScatter', datasets, 'Recency (ngay)', 'Tong chi (BRL)');
     }
 
     // Table
@@ -167,7 +167,7 @@
           <td>${c.state || '—'}</td>
           <td>${c.recency != null ? c.recency : '—'}</td>
           <td>${c.frequency != null ? c.frequency : '—'}</td>
-          <td>${c.monetary != null ? Number(c.monetary).toLocaleString('pt-BR', {maximumFractionDigits:0}) : '—'}</td>
+          <td>${c.monetary != null ? Number(c.monetary).toLocaleString('vi-VN', {maximumFractionDigits:0}) : '—'}</td>
         </tr>
       `).join('');
     }
@@ -251,7 +251,7 @@
             <td>${c.city || '—'}</td>
             <td>${c.state || '—'}</td>
             <td><span class="prob-badge ${pb.cls}">${pb.text}</span></td>
-            <td>${c.monetary != null ? Number(c.monetary).toLocaleString('pt-BR', {maximumFractionDigits:0}) : '—'}</td>
+            <td>${c.monetary != null ? Number(c.monetary).toLocaleString('vi-VN', {maximumFractionDigits:0}) : '—'}</td>
             <td>${c.recency != null ? c.recency : '—'}</td>
           </tr>`;
       }).join('');
@@ -318,7 +318,7 @@
         borderWidth: 1,
         pointRadius: 6,
         pointHoverRadius: 9,
-      }], 'Giá Trung Bình (R$)', 'Đánh Giá TB');
+      }], 'Gia Trung Binh (BRL)', 'Danh Gia TB');
     }
   }
 
@@ -337,7 +337,7 @@
         'stateRevenueBar',
         top10.map(d => d.state),
         top10.map(d => d.revenue),
-        'Doanh Thu (R$)'
+        'Doanh Thu (BRL)'
       );
     }
 

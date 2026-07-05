@@ -1,5 +1,13 @@
-# Python dependencies
-pyspark==3.5.1
-pymongo==4.7.0
-flask==3.0.3
-python-dotenv==1.0.0
+# --- Cốt lõi Xử lý Dữ liệu Lớn (Big Data Core) ---
+pyspark==3.5.5
+
+# --- Cơ sở dữ liệu (Serving Layer) ---
+pymongo>=4.6.0
+
+# --- Web Dashboard (Presentation Layer) ---
+Flask>=3.0.0
+Werkzeug>=3.0.0
+
+# --- Thư viện bổ trợ (Optional but Recommended cho Spark MLlib) ---
+numpy>=1.26.0
+pandas>=2.2.0

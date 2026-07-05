@@ -57,9 +57,10 @@ MONGO_URI = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/{MONGO_DATABASE}"
 # URI khi sẽ chọn database riêng qua client[MONGO_DATABASE] sau đó.
 MONGO_URI_BASE = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/"
 
-# Đường dẫn HDFS
-HDFS_RAW_PATH = "hdfs://localhost:9000/user/bigdata/olist/raw"
-HDFS_PROCESSED_PATH = "hdfs://localhost:9000/user/bigdata/olist/processed"
+# HDFS Paths - Medallion Architecture (Bronze / Silver / Gold)
+HDFS_BRONZE = "hdfs://localhost:9000/user/bigdata/olist/bronze"
+HDFS_SILVER = "hdfs://localhost:9000/user/bigdata/olist/silver"
+HDFS_GOLD = "hdfs://localhost:9000/user/bigdata/olist/gold"
 
 
 def create_spark_session():
@@ -207,16 +208,16 @@ def load_all_data(spark):
     data = {}
 
     # Đọc dữ liệu đã xử lý
-    data["merged_orders"] = spark.read.parquet(f"{HDFS_PROCESSED_PATH}/merged_orders")
+    data["merged_orders"] = spark.read.parquet(f"{HDFS_SILVER}/merged_orders")
     logger.info(f"  merged_orders: {data['merged_orders'].count():,} dòng")
 
-    data["rfm_customers"] = spark.read.parquet(f"{HDFS_PROCESSED_PATH}/rfm_customers")
+    data["rfm_customers"] = spark.read.parquet(f"{HDFS_GOLD}/rfm_customers")
     logger.info(f"  rfm_customers: {data['rfm_customers'].count():,} dòng")
 
     # Đọc kết quả phân khúc (nếu có)
     try:
         data["customer_segments"] = spark.read.parquet(
-            f"{HDFS_PROCESSED_PATH}/customer_segments"
+            f"{HDFS_GOLD}/customer_segments"
         )
         logger.info(f"  customer_segments: {data['customer_segments'].count():,} dòng")
     except Exception:
@@ -226,7 +227,7 @@ def load_all_data(spark):
     # Đọc kết quả dự đoán churn (nếu có)
     try:
         data["churn_predictions"] = spark.read.parquet(
-            f"{HDFS_PROCESSED_PATH}/churn_predictions"
+            f"{HDFS_GOLD}/churn_predictions"
         )
         logger.info(f"  churn_predictions: {data['churn_predictions'].count():,} dòng")
     except Exception:
@@ -241,25 +242,25 @@ def load_all_data(spark):
         spark.read
         .option("header", "true")
         .option("inferSchema", "true")
-        .csv(f"{HDFS_RAW_PATH}/order_items/olist_order_items_dataset.csv")
+        .csv(f"{HDFS_BRONZE}/order_items/olist_order_items_dataset.csv")
     )
     data["raw_products"] = (
         spark.read
         .option("header", "true")
         .option("inferSchema", "true")
-        .csv(f"{HDFS_RAW_PATH}/products/olist_products_dataset.csv")
+        .csv(f"{HDFS_BRONZE}/products/olist_products_dataset.csv")
     )
     data["raw_sellers"] = (
         spark.read
         .option("header", "true")
         .option("inferSchema", "true")
-        .csv(f"{HDFS_RAW_PATH}/sellers/olist_sellers_dataset.csv")
+        .csv(f"{HDFS_BRONZE}/sellers/olist_sellers_dataset.csv")
     )
     data["raw_category_translation"] = (
         spark.read
         .option("header", "true")
         .option("inferSchema", "true")
-        .csv(f"{HDFS_RAW_PATH}/category_translation/product_category_name_translation.csv")
+        .csv(f"{HDFS_BRONZE}/category_translation/product_category_name_translation.csv")
     )
 
     return data
@@ -773,8 +774,173 @@ def export_aggregations(data, spark, ml_results=None):
 
 
 # ============================================================================
-# MAIN: Chạy xuất dữ liệu sang MongoDB
+# MONGODB SCHEMA VALIDATORS (Star Schema Enforcement)
 # ============================================================================
+
+def setup_mongodb_schema_validators():
+    """
+    Tao JSON Schema validators cho cac collection MongoDB.
+    Schema pattern: Denormalized Star Schema
+      - orders:      Fact table (embedded customer, items, payment, review)
+      - customers:   Dimension table (RFM + segment + churn)
+      - products:    Dimension table (product stats)
+      - sellers:     Dimension table (seller stats)
+      - aggregations: Pre-computed Gold layer (no strict schema)
+    """
+    from pymongo import MongoClient
+    client = MongoClient(MONGO_URI_BASE)
+    db = client[MONGO_DATABASE]
+
+    validators = {
+        "orders": {
+            "$jsonSchema": {
+                "bsonType": "object",
+                "required": ["order_id", "order_status"],
+                "properties": {
+                    "order_id": {
+                        "bsonType": "string",
+                        "description": "Primary key - unique order identifier"
+                    },
+                    "order_status": {
+                        "bsonType": "string",
+                        "description": "Order status (delivered, shipped, etc.)"
+                    },
+                    "customer": {
+                        "bsonType": "object",
+                        "description": "Embedded customer dimension",
+                        "properties": {
+                            "customer_id": {"bsonType": "string"},
+                            "customer_unique_id": {"bsonType": "string"},
+                            "customer_city": {"bsonType": ["string", "null"]},
+                            "customer_state": {"bsonType": ["string", "null"]}
+                        }
+                    },
+                    "items": {
+                        "bsonType": "object",
+                        "description": "Embedded order items"
+                    },
+                    "payment": {
+                        "bsonType": "object",
+                        "description": "Embedded payment info"
+                    },
+                    "review": {
+                        "bsonType": ["object", "null"],
+                        "description": "Embedded review data"
+                    },
+                    "order_value": {
+                        "bsonType": ["double", "int", "long", "null"],
+                        "description": "Total order value (measure)"
+                    },
+                    "delivery_days": {
+                        "bsonType": ["double", "int", "long", "null"],
+                        "description": "Days to deliver (measure)"
+                    }
+                }
+            }
+        },
+        "customers": {
+            "$jsonSchema": {
+                "bsonType": "object",
+                "required": ["customer_unique_id"],
+                "properties": {
+                    "customer_unique_id": {
+                        "bsonType": "string",
+                        "description": "Primary key - unique customer ID"
+                    },
+                    "customer_state": {"bsonType": ["string", "null"]},
+                    "customer_city": {"bsonType": ["string", "null"]},
+                    "recency": {
+                        "bsonType": ["double", "int", "long", "null"],
+                        "description": "RFM - days since last purchase"
+                    },
+                    "frequency": {
+                        "bsonType": ["double", "int", "long", "null"],
+                        "description": "RFM - number of purchases"
+                    },
+                    "monetary": {
+                        "bsonType": ["double", "int", "long", "null"],
+                        "description": "RFM - total spend"
+                    },
+                    "segment_name": {
+                        "bsonType": ["string", "null"],
+                        "description": "Customer segment (Champions, Loyal, etc.)"
+                    },
+                    "churn_prediction": {
+                        "bsonType": ["double", "int", "long", "null"],
+                        "description": "ML churn prediction (0 or 1)"
+                    },
+                    "churn_probability": {
+                        "bsonType": ["double", "int", "long", "null"],
+                        "description": "ML churn probability [0,1]"
+                    }
+                }
+            }
+        },
+        "products": {
+            "$jsonSchema": {
+                "bsonType": "object",
+                "required": ["product_id"],
+                "properties": {
+                    "product_id": {
+                        "bsonType": "string",
+                        "description": "Primary key"
+                    },
+                    "category_en": {"bsonType": ["string", "null"]},
+                    "total_orders": {"bsonType": ["double", "int", "long", "null"]},
+                    "total_revenue": {"bsonType": ["double", "int", "long", "null"]},
+                    "avg_price": {"bsonType": ["double", "int", "long", "null"]},
+                    "avg_review_score": {"bsonType": ["double", "int", "long", "null"]}
+                }
+            }
+        },
+        "sellers": {
+            "$jsonSchema": {
+                "bsonType": "object",
+                "required": ["seller_id"],
+                "properties": {
+                    "seller_id": {
+                        "bsonType": "string",
+                        "description": "Primary key"
+                    },
+                    "seller_city": {"bsonType": ["string", "null"]},
+                    "seller_state": {"bsonType": ["string", "null"]},
+                    "total_items_sold": {"bsonType": ["double", "int", "long", "null"]},
+                    "total_revenue": {"bsonType": ["double", "int", "long", "null"]}
+                }
+            }
+        },
+    }
+
+    logger.info("=" * 60)
+    logger.info("SETUP MONGODB SCHEMA VALIDATORS")
+    logger.info("=" * 60)
+
+    for collection_name, validator in validators.items():
+        try:
+            # Thu collMod truoc (collection da ton tai)
+            db.command("collMod", collection_name,
+                       validator=validator,
+                       validationLevel="moderate",
+                       validationAction="warn")
+            logger.info(f"  {collection_name}: Schema validator UPDATED")
+        except Exception:
+            try:
+                # Collection chua ton tai -> tao moi voi validator
+                db.create_collection(collection_name, validator=validator)
+                logger.info(f"  {collection_name}: Schema validator CREATED")
+            except Exception as e2:
+                logger.warning(f"  {collection_name}: Could not set validator: {e2}")
+
+    # aggregations: no strict schema (different agg_types have different fields)
+    logger.info("  aggregations: No strict schema (varied agg_type rows)")
+    logger.info("  Schema validators setup complete.")
+    client.close()
+
+
+# ============================================================================
+# MAIN: Chay xuat du lieu sang MongoDB
+# ============================================================================
+
 
 def run_export(ml_results=None):
     """
@@ -785,13 +951,16 @@ def run_export(ml_results=None):
     """
     start_time = datetime.now()
     logger.info("*" * 60)
-    logger.info("BẮT ĐẦU XUẤT DỮ LIỆU SANG MONGODB")
-    logger.info(f"Thời gian: {start_time}")
+    logger.info("BAT DAU XUAT DU LIEU SANG MONGODB")
+    logger.info(f"Thoi gian: {start_time}")
     logger.info(f"MongoDB URI: {MONGO_URI}")
     logger.info("*" * 60)
 
     try:
-        # Khởi tạo Spark
+        # Setup MongoDB Schema Validators
+        setup_mongodb_schema_validators()
+
+        # Khoi tao Spark
         spark = create_spark_session()
 
         # Đọc dữ liệu

@@ -39,7 +39,7 @@
       "true_positive": 14340,
       "true_negative": 3632,
       "false_positive": 103,
-      "false_negative": 501
+      "false_negative": 508
     },
     "feature_importance": {
       "f_score": 0.8843,
@@ -98,6 +98,6 @@
       "category_index"
     ]
   },
-  "timestamp": "2026-06-26T12:31:24.696761",
-  "duration_seconds": 168.1
+  "timestamp": "2026-07-04T20:27:08.130689",
+  "duration_seconds": 163.1
 }

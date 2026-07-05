@@ -16,7 +16,11 @@ import sys
 import os
 from datetime import datetime
 
-PYTHON_PATH = "C:/Users/Admin/AppData/Local/Programs/Python/Python312/python.exe"
+# Set PYSPARK_PYTHON bằng FULL PATH, dùng Python 3.13 (đã xác nhận có đủ
+# pyspark + pandas + pyarrow trên máy này - Python 3.12 trước đó THIẾU cả
+# pandas lẫn pyarrow, là nguyên nhân khiến worker chết giữa chừng khi ghi
+# parquet, để lại thư mục HDFS rỗng 0B dù không báo lỗi rõ ràng).
+PYTHON_PATH = "C:/Users/Admin/AppData/Local/Programs/Python/Python313/python.exe"
 os.environ["PYSPARK_PYTHON"] = PYTHON_PATH
 os.environ["PYSPARK_DRIVER_PYTHON"] = PYTHON_PATH
 os.environ["SPARK_LOCAL_IP"] = "127.0.0.1"
@@ -44,10 +48,40 @@ logging.basicConfig(
 logger = logging.getLogger("OlistETL")
 
 # ============================================================================
-# Đường dẫn HDFS
+# HDFS Paths - Medallion Architecture (Bronze / Silver / Gold)
 # ============================================================================
-HDFS_RAW_PATH = "hdfs://localhost:9000/user/bigdata/olist/raw"
-HDFS_PROCESSED_PATH = "hdfs://localhost:9000/user/bigdata/olist/processed"
+HDFS_BRONZE = "hdfs://localhost:9000/user/bigdata/olist/bronze"
+HDFS_SILVER = "hdfs://localhost:9000/user/bigdata/olist/silver"
+HDFS_GOLD = "hdfs://localhost:9000/user/bigdata/olist/gold"
+
+
+# ============================================================================
+# Schema Validation
+# ============================================================================
+def validate_dataframe_schema(df, expected_columns, label):
+    """Validate DataFrame schema truoc khi ghi HDFS."""
+    actual_cols = set(df.columns)
+    expected_cols = set(expected_columns)
+    missing = expected_cols - actual_cols
+    if missing:
+        raise ValueError(
+            f"Schema validation FAILED for {label}: missing columns {missing}"
+        )
+    row_count = df.count()
+    null_report = []
+    for col in expected_columns[:10]:  # check top 10 columns
+        null_count = df.filter(F.col(col).isNull()).count()
+        if null_count > 0:
+            null_pct = round(null_count / row_count * 100, 2) if row_count else 0
+            null_report.append(f"    {col}: {null_count:,} nulls ({null_pct}%)")
+    if null_report:
+        logger.info(f"  Schema validation for {label} - null report:")
+        for line in null_report:
+            logger.info(line)
+    logger.info(
+        f"  Schema validation PASSED for {label}: "
+        f"{len(actual_cols)} columns, {row_count:,} rows"
+    )
 
 
 def create_spark_session():
@@ -85,7 +119,7 @@ def create_spark_session():
 
 
 # ============================================================================
-# Đọc dữ liệu từ HDFS
+# BƯỚC 1: Đọc dữ liệu từ HDFS
 # ============================================================================
 
 def load_raw_data(spark):
@@ -112,7 +146,7 @@ def load_raw_data(spark):
 
     dataframes = {}
     for name, filename in csv_files.items():
-        path = f"{HDFS_RAW_PATH}/{filename}"
+        path = f"{HDFS_BRONZE}/{filename}"
         logger.info(f"  Đang đọc: {filename}")
         try:
             df = (
@@ -135,7 +169,7 @@ def load_raw_data(spark):
 
 
 # ============================================================================
-# Join tất cả bảng thành merged_orders
+# BƯỚC 2: Join tất cả bảng thành merged_orders
 # ============================================================================
 
 def join_tables(dataframes):
@@ -266,7 +300,7 @@ def join_tables(dataframes):
 
 
 # ============================================================================
-# Làm sạch dữ liệu
+# BƯỚC 3: Làm sạch dữ liệu
 # ============================================================================
 
 def clean_data(df):
@@ -366,7 +400,7 @@ def clean_data(df):
 
 
 # ============================================================================
-# Feature Engineering
+# BƯỚC 4: Feature Engineering
 # ============================================================================
 
 def engineer_features(df):
@@ -465,7 +499,7 @@ def engineer_features(df):
 
 
 # ============================================================================
-# Tính RFM (Recency, Frequency, Monetary) cho từng khách hàng
+# BƯỚC 5: Tính RFM (Recency, Frequency, Monetary) cho từng khách hàng
 # ============================================================================
 
 def calculate_rfm(df, spark):
@@ -562,7 +596,7 @@ def calculate_rfm(df, spark):
 
 
 # ============================================================================
-# Tạo nhãn Churn (khách hàng rời bỏ)
+# BƯỚC 6: Tạo nhãn Churn (khách hàng rời bỏ)
 # ============================================================================
 
 def create_churn_label(df):
@@ -605,7 +639,7 @@ def create_churn_label(df):
 
 
 # ============================================================================
-# Lưu dữ liệu đã xử lý lên HDFS
+# BƯỚC 7: Lưu dữ liệu đã xử lý lên HDFS
 # ============================================================================
 
 def _verify_hdfs_write(spark, hdfs_path, label):
@@ -655,27 +689,41 @@ def save_processed_data(merged_df, rfm_df, spark):
     logger.info("BƯỚC 7: Lưu dữ liệu lên HDFS")
     logger.info("=" * 60)
 
-    # Lưu merged_orders
-    merged_path = f"{HDFS_PROCESSED_PATH}/merged_orders"
-    logger.info(f"  Đang lưu merged_orders -> {merged_path}")
+    # --- Schema Validation truoc khi ghi ---
+    validate_dataframe_schema(
+        merged_df,
+        ["order_id", "customer_unique_id", "total_price",
+         "delivery_days", "review_score", "order_status"],
+        "merged_orders (Silver)"
+    )
+    validate_dataframe_schema(
+        rfm_df,
+        ["customer_unique_id", "recency", "frequency", "monetary",
+         "r_score", "f_score", "m_score"],
+        "rfm_customers (Gold)"
+    )
+
+    # Luu merged_orders -> Silver
+    merged_path = f"{HDFS_SILVER}/merged_orders"
+    logger.info(f"  Dang luu merged_orders -> {merged_path}")
     (
         merged_df
-        .coalesce(4)  # Giảm số partition để tối ưu cho tập dữ liệu nhỏ
+        .coalesce(4)
         .write
         .mode("overwrite")
         .parquet(merged_path)
     )
-    logger.info("  -> Lệnh ghi merged_orders đã chạy xong, đang xác nhận...")
+    logger.info("  -> Lenh ghi merged_orders da chay xong, dang xac nhan...")
     if not _verify_hdfs_write(spark, merged_path, "merged_orders"):
         raise RuntimeError(
-            "Ghi merged_orders lên HDFS thất bại (thư mục rỗng sau khi "
-            "ghi). Kiểm tra lại cấu hình PYSPARK_PYTHON / PATH trước khi "
-            "chạy lại."
+            "Ghi merged_orders len HDFS that bai (thu muc rong sau khi "
+            "ghi). Kiem tra lai cau hinh PYSPARK_PYTHON / PATH truoc khi "
+            "chay lai."
         )
 
-    # Lưu rfm_customers
-    rfm_path = f"{HDFS_PROCESSED_PATH}/rfm_customers"
-    logger.info(f"  Đang lưu rfm_customers -> {rfm_path}")
+    # Luu rfm_customers -> Gold
+    rfm_path = f"{HDFS_GOLD}/rfm_customers"
+    logger.info(f"  Dang luu rfm_customers -> {rfm_path}")
     (
         rfm_df
         .coalesce(2)
@@ -683,12 +731,12 @@ def save_processed_data(merged_df, rfm_df, spark):
         .mode("overwrite")
         .parquet(rfm_path)
     )
-    logger.info("  -> Lệnh ghi rfm_customers đã chạy xong, đang xác nhận...")
+    logger.info("  -> Lenh ghi rfm_customers da chay xong, dang xac nhan...")
     if not _verify_hdfs_write(spark, rfm_path, "rfm_customers"):
         raise RuntimeError(
-            "Ghi rfm_customers lên HDFS thất bại (thư mục rỗng sau khi "
-            "ghi). Kiểm tra lại cấu hình PYSPARK_PYTHON / PATH trước khi "
-            "chạy lại."
+            "Ghi rfm_customers len HDFS that bai (thu muc rong sau khi "
+            "ghi). Kiem tra lai cau hinh PYSPARK_PYTHON / PATH truoc khi "
+            "chay lai."
         )
 
     return merged_path, rfm_path
@@ -743,7 +791,8 @@ def run_etl_pipeline():
         logger.info(f"  Thời gian chạy: {duration:.1f} giây")
         logger.info(f"  Merged orders: {merged_df.count():,} dòng")
         logger.info(f"  RFM customers: {rfm_df.count():,} dòng")
-        logger.info(f"  Dữ liệu lưu tại: {HDFS_PROCESSED_PATH}")
+        logger.info(f"  Silver: {HDFS_SILVER}")
+        logger.info(f"  Gold: {HDFS_GOLD}")
         logger.info("*" * 60)
 
         return spark, merged_df, rfm_df
