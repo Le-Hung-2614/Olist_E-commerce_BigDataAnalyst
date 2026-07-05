@@ -1,117 +1,10 @@
-# Olist E-Commerce Big Data Analytics Pipeline
+# Hệ Thống Phân Tích Dữ Liệu Lớn Sàn Thương Mại Điện Tử Olist (Olist Big Data Analytics)
 
-![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)
-![Hadoop](https://img.shields.io/badge/Hadoop-3.x-yellow.svg)
-![Spark](https://img.shields.io/badge/Spark-3.5.x-orange.svg)
-![MongoDB](https://img.shields.io/badge/MongoDB-Latest-green.svg)
-![Flask](https://img.shields.io/badge/Flask-Web_Framework-black.svg)
-
-Dự án xây dựng một hệ thống xử lý Dữ liệu Lớn (Big Data) end-to-end cho tập dữ liệu thương mại điện tử Olist. Hệ thống bao quát toàn bộ quy trình từ khâu thu thập dữ liệu (Ingestion), xây dựng Hồ dữ liệu (Data Lake) với kiến trúc Medallion, xử lý song song, ứng dụng Học máy (Machine Learning) phân tán, và cuối cùng là trực quan hóa dữ liệu trên Dashboard thời gian thực.
+Dự án Big Data mô phỏng toàn bộ quy trình xây dựng kho dữ liệu (Data Warehouse) và hệ thống học máy (Machine Learning) cho tập dữ liệu thương mại điện tử Olist của Brazil. Hệ thống cung cấp một bảng điều khiển (Dashboard) trực quan để phân tích doanh thu, sản phẩm, phân khúc khách hàng và dự đoán tỷ lệ rời bỏ (Churn Prediction).
 
 ---
 
-## 1. Giới thiệu Dataset (Olist Store)
-Dự án sử dụng bộ dữ liệu công khai **[Brazilian E-Commerce Public Dataset by Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)** từ Kaggle.
-Olist là nền tảng thương mại điện tử lớn nhất tại Brazil. Tập dữ liệu này chứa thông tin của **hơn 100.000 đơn hàng** được đặt trong khoảng thời gian từ năm 2016 đến 2018.
-
-Dữ liệu được chia thành 9 file CSV riêng biệt, bao gồm các thông tin:
-*   Đơn hàng & Trạng thái giao hàng (`olist_orders_dataset.csv`)
-*   Chi tiết sản phẩm trong đơn (`olist_order_items_dataset.csv`)
-*   Thanh toán (`olist_order_payments_dataset.csv`)
-*   Đánh giá của khách hàng (`olist_order_reviews_dataset.csv`)
-*   Khách hàng (`olist_customers_dataset.csv`)
-*   Người bán (`olist_sellers_dataset.csv`)
-*   Sản phẩm (`olist_products_dataset.csv`)
-*   Vị trí địa lý (`olist_geolocation_dataset.csv`)
-*   Dịch tên danh mục (`product_category_name_translation.csv`)
-
----
-
-## 2. Kiến trúc Hệ thống
-
-Hệ thống được thiết kế theo các tiêu chuẩn Big Data hiện đại nhất:
-*   **Data Lake (HDFS):** Áp dụng **Medallion Architecture** (Bronze ➔ Silver ➔ Gold) để lưu trữ và phân tầng dữ liệu theo mức độ sạch/giá trị.
-*   **Xử lý phân tán (Apache Spark):** Đảm nhiệm vai trò ETL (Extract, Transform, Load) khổng lồ, join 9 bảng lại với nhau.
-*   **Machine Learning (Spark MLlib):**
-    *   *K-Means:* Phân cụm khách hàng (Segmentation) dựa trên mô hình RFM.
-    *   *Random Forest / Logistic Regression:* Dự đoán xác suất khách hàng rời bỏ (Churn Prediction).
-*   **Data Warehouse (MongoDB):** Áp dụng mô hình **Denormalized Star Schema** kết hợp JSON Schema Validation. Mọi thông tin (Items, Customer, Payment, Review) được nhúng (Embed) vào bảng `orders` để tối ưu hóa tốc độ đọc (Read-heavy).
-*   **Trực quan hóa (Flask + Chart.js):** Dashboard hiển thị số liệu kinh doanh, biểu đồ doanh thu và kết quả phân tích AI trực quan.
-
----
-
-## 3. Yêu cầu Hệ thống (System Requirements)
-
-Để chạy dự án trên môi trường Local (Windows), bạn cần cài đặt sẵn:
-1.  **Hệ điều hành:** Windows (với winutils.exe hỗ trợ Hadoop).
-2.  **Java:** JDK 8 hoặc JDK 11 (yêu cầu bắt buộc cho Hadoop và Spark).
-3.  **Python:** Phiên bản `3.12+`.
-4.  **Hadoop:** Phiên bản `3.x` (Đảm bảo HDFS đã được start tại `hdfs://localhost:9000`).
-5.  **Apache Spark:** Phiên bản `3.5.x` (Đã cấu hình các biến môi trường `SPARK_HOME`, `HADOOP_HOME`, `PYSPARK_PYTHON`).
-6.  **MongoDB:** Đang chạy tại `localhost:27017` (Cài đặt MongoDB Community Server & MongoDB Compass).
-
----
-
-## 4. Hướng dẫn Cài đặt (Installation)
-
-**Bước 1: Clone dự án và truy cập thư mục**
-```bash
-cd olist-bigdata-project
-```
-
-**Bước 2: Tạo môi trường ảo Python (Khuyến nghị)**
-```bash
-python -m venv venv
-venv\Scripts\activate
-```
-
-**Bước 3: Cài đặt các thư viện phụ thuộc**
-```bash
-pip install -r requirements.txt
-```
-
----
-
-## 5. Hướng dẫn Chạy Hệ thống (Run Pipeline)
-
-Quy trình Big Data Pipeline bắt buộc phải chạy theo thứ tự tuần tự để dữ liệu được luân chuyển từ Raw (CSV) đến Dashboard.
-
-*(Lưu ý: Trước khi chạy, đảm bảo Hadoop HDFS và MongoDB đã được bật)*
-
-### Bước 5.1: Thu thập và Validate Dữ liệu (Ingestion)
-Đọc 9 file CSV, kiểm tra tính hợp lệ (Data Quality check), và tải lên HDFS `Bronze Layer` (`/user/bigdata/olist/bronze/`).
-```bash
-python spark_jobs/ingestion.py
-```
-
-### Bước 5.2: Xử lý ETL (Silver & Gold Layers)
-Dùng Spark dọn dẹp dữ liệu, join các bảng, loại bỏ ngoại lệ và lưu xuống HDFS `Silver Layer` và `Gold Layer`.
-```bash
-python spark_jobs/etl.py
-```
-
-### Bước 5.3: Huấn luyện Machine Learning
-Chạy thuật toán phân cụm khách hàng và dự đoán tỷ lệ rời bỏ. Kết quả được lưu tiếp vào `Gold Layer`.
-```bash
-python spark_jobs/ml_models.py
-```
-
-### Bước 5.4: Xuất dữ liệu sang MongoDB
-Đẩy toàn bộ dữ liệu sạch và kết quả ML từ HDFS sang MongoDB `olist_dw`. Đồng thời áp dụng Schema Validators cho database.
-```bash
-python spark_jobs/export_to_mongo.py
-```
-
-### Bước 5.5: Khởi động Web Dashboard
-Khởi chạy Flask server.
-```bash
-python webapp/app.py
-```
-👉 Mở trình duyệt và truy cập: **`http://127.0.0.1:5000`**
-
----
-
-## 6. Cấu trúc Thư mục
+## Cấu Trúc Thư Mục (Directory Structure)
 
 ```text
 olist-bigdata-project/
@@ -132,4 +25,111 @@ olist-bigdata-project/
 ```
 
 ---
-*Developed for Big Data Systems Project*
+
+## Kiến Trúc Dữ Liệu (Data Architecture Layers)
+
+Hệ thống được thiết kế theo tiêu chuẩn Data Lake / Data Warehouse với 3 phân lớp (Medallion Architecture):
+
+1. **Bronze Layer (Dữ liệu thô):**
+   * Đọc trực tiếp các file `.csv` từ thư mục `data/` bằng PySpark.
+   * Dữ liệu giữ nguyên bản chất thô (chứa các giá trị Null, kiểu dữ liệu ngày tháng bị sai dạng chuỗi...).
+
+2. **Silver Layer (Dữ liệu sạch):**
+   * Xử lý định dạng lại toàn bộ thời gian (timestamps).
+   * Lọc và loại bỏ các giá trị dị biệt (Outliers), xử lý dữ liệu bị thiếu (Missing values).
+   * Dịch tên danh mục sản phẩm (Categories) từ tiếng Bồ Đào Nha sang tiếng Anh.
+   * Nối (Join) các bảng lại với nhau để tạo ra bộ dữ liệu trung tâm `merged_orders`.
+
+3. **Gold Layer (Dữ liệu phục vụ nghiệp vụ):**
+   * Thực hiện các hàm tổng hợp (Aggregations).
+   * Chạy thuật toán K-Means Clustering trên PySpark để phân cụm khách hàng theo mô hình RFM (Recency, Frequency, Monetary).
+   * Tính toán các chỉ số Vận chuyển (Logistics), Đánh giá (Reviews) và bản đồ phân bổ (Geospatial).
+   * Xuất toàn bộ dữ liệu Gold này đẩy thẳng vào **MongoDB** để Web Dashboard hiển thị tốc độ cao (ms).
+
+---
+
+## ⚙️ Quy Trình Hoạt Động (Workflow)
+
+1. **Data Ingestion (Thu thập):** Apache Spark đọc hàng triệu bản ghi từ các file CSV.
+2. **Data Pipeline (Xử lý):** File `data_processing.py` chạy qua các pipeline làm sạch dữ liệu, tạo bảng kết hợp và lưu các báo cáo tổng hợp vào MongoDB.
+3. **Machine Learning Training:** File `ml_models.py` lấy dữ liệu sạch, sử dụng `RandomForestClassifier` và `LogisticRegression` để học quy luật rời bỏ của khách hàng. Nó xuất ra file `churn_prediction.joblib`.
+4. **Data Serving & Visualization:** Web App (`Flask`) kết nối vào MongoDB để đổ dữ liệu ra các biểu đồ Chart.js tuyệt đẹp và tải mô hình `.joblib` lên để cho phép dự đoán trực tiếp ngay trên web.
+
+---
+
+## 🗄 Lược Đồ Dữ Liệu (Database Schema)
+
+Dữ liệu gốc bao gồm 9 bảng (tables) quan hệ chính:
+- **`Customers`**: `customer_id`, `customer_unique_id`, `zip_code_prefix`, `city`, `state`.
+- **`Orders`**: `order_id`, `customer_id`, `order_status`, `purchase_timestamp`, `delivered_customer_date`...
+- **`Order_Items`**: `order_id`, `order_item_id`, `product_id`, `seller_id`, `price`, `freight_value`.
+- **`Products`**: `product_id`, `product_category_name`, `product_weight_g`...
+- **`Order_Payments`**: `order_id`, `payment_sequential`, `payment_type`, `payment_installments`, `payment_value`.
+- **`Order_Reviews`**: `review_id`, `order_id`, `review_score` (1-5), `review_comment_message`.
+- **`Sellers`**: `seller_id`, `seller_zip_code_prefix`, `seller_city`, `seller_state`.
+- **`Geolocation`**: `geolocation_zip_code_prefix`, `geolocation_lat`, `geolocation_lng`, `geolocation_state`.
+
+> Trên **MongoDB**, dữ liệu được nén lại thành các collection: `orders`, `customers`, `products`, `sellers` và đặc biệt là collection `aggregations` (lưu mọi chỉ số Dashboard đã tính sẵn để tải siêu tốc).
+
+---
+
+## 🛠 Yêu Cầu Cài Đặt (Prerequisites)
+
+Để chạy hệ thống này, máy tính của bạn cần cài đặt:
+1. **Python 3.10+**
+2. **Java 8 hoặc Java 11** (Bắt buộc để chạy được Apache Spark)
+3. **MongoDB** (Phiên bản Community Server, chạy ở port mặc định `27017`)
+4. **Hadoop / Winutils** (Nếu bạn dùng Windows để chạy Spark cục bộ)
+
+Các thư viện Python cần cài đặt:
+```bash
+pip install pyspark pymongo pandas numpy scikit-learn joblib Flask
+```
+
+---
+
+# Hướng Dẫn Cách Chạy (How to Run)
+
+## 1. Set biến môi trường (mỗi lần mở terminal mới)
+$env:JAVA_HOME = "C:\Java\jdk1.8.0_491"
+$env:HADOOP_HOME = "C:\hadoop"
+
+## 2. Khởi động HDFS
+& C:\hadoop\sbin\start-dfs.cmd
+
+## 3. Đợi ~15-30 giây cho NameNode khởi động xong
+
+## 4. Kiểm tra HDFS đã chạy chưa
+& hdfs dfs -ls /
+
+## 5. Nếu thành công → chạy file tạo thư mục vào HDFS
+cd C:\Users\Admin\.gemini\antigravity\scratch\olist-bigdata-project
+python spark_jobs/ingestion.py
+
+## 7. Chạy ETL
+python spark_jobs/etl.py
+
+## 8. Chạy Model
+python spark_jobs/ml_models.py
+
+## 9. Upload dữ liệu lên database MongoDB
+python spark_jobs/export_to_mongo.py
+
+## 10. Chạy Dashboard Web
+Khởi động hệ thống Flask Backend:
+
+cd webapp
+python app.py
+
+Mở trình duyệt web và truy cập vào địa chỉ:
+**http://127.0.0.1:5000 hoặc http://127.0.0.1:5000**
+
+---
+
+## ✨ Các Tính Năng Của Dashboard
+
+1. **Tổng quan (Overview):** KPIs tổng như Doanh thu, Số đơn hàng, Giá trị trung bình đơn.
+2. **Phân Khúc Khách Hàng (Customer Segmentation):** Mô hình RFM chia khách hàng thành VIP, Loyal, At Risk... 
+3. **Mô Hình ML (Churn Prediction):** Trình diễn ma trận nhầm lẫn, biến số quan trọng và Giao diện cho phép giả lập thông tin khách hàng để AI dự đoán "Tỷ lệ rời bỏ" theo thời gian thực.
+4. **Sản Phẩm & Giao Vận (Products & Logistics):** Tỷ lệ giao hàng trễ, bản đồ thời gian giao hàng, phân tích ảnh hưởng của phí ship đến tỷ lệ hủy đơn.
+5. **Bản Đồ Doanh Thu (Geospatial):** Heatmap doanh thu phân bổ dọc theo các bang của Brazil (SP, RJ, MG...).

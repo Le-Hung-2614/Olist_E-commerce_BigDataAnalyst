@@ -665,7 +665,7 @@
       resultDiv.classList.remove('hidden', 'result-low', 'result-medium', 'result-high');
 
       const prob = data.probability || 0;
-      icon.textContent = prob >= 0.5 ? '🚨' : '✅';
+      if (icon) icon.textContent = prob >= 0.5 ? '🚨' : '✅';
       label.textContent = data.label || '—';
       probEl.textContent = (prob * 100).toFixed(1) + '%';
       riskEl.textContent = data.risk_level || '—';

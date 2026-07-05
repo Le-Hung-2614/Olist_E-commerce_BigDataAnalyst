@@ -284,7 +284,7 @@ def train_churn_prediction(merged_df, rfm_df, spark):
     )
 
     feature_cols = [
-        "frequency", "monetary", "f_score", "m_score",
+        "monetary", "m_score",
         "avg_review", "avg_delivery_days", "total_items_bought",
         "avg_payment", "category_diversity",
     ]
@@ -692,7 +692,60 @@ def run_all_models():
 
 
 # ==========================================================================
+# Giao tiep Flask API (Scikit-Learn lightweight)
+# ==========================================================================
+def train_sklearn_model_for_api():
+    """
+    Train a lightweight Scikit-Learn model and export as joblib for Flask API
+    predict route to consume instantly.
+    """
+    logger.info("Training lightweight Scikit-Learn model for Flask API...")
+    import pymongo
+    import pandas as pd
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.preprocessing import StandardScaler
+    import joblib
+    import os
+
+    try:
+        client = pymongo.MongoClient('mongodb://localhost:27017/')
+        db = client['olist_dw']
+        df = pd.DataFrame(list(db['customers'].find({}, {
+            '_id': 0, 'recency': 1, 'frequency': 1, 'monetary': 1,
+            'avg_review_score': 1, 'avg_delivery_days': 1, 'churn_probability': 1
+        })))
+
+        if not df.empty:
+            df.fillna(0, inplace=True)
+            if 'churn_probability' not in df.columns:
+                df['churn_probability'] = (df['recency'] > 90).astype(int)
+            
+            # Use only relevant features to avoid leakage (no f_score)
+            cols = ['recency', 'frequency', 'monetary', 'avg_review_score', 'avg_delivery_days']
+            for c in cols:
+                if c not in df.columns:
+                    df[c] = 0
+
+            X = df[cols]
+            y = (df['churn_probability'] > 0.5).astype(int)
+
+            scaler = StandardScaler()
+            X_scaled = scaler.fit_transform(X)
+
+            model = RandomForestClassifier(max_depth=5, n_estimators=50, random_state=42)
+            model.fit(X_scaled, y)
+
+            os.makedirs("tmp_models", exist_ok=True)
+            joblib.dump({'scaler': scaler, 'model': model}, 'tmp_models/churn_prediction.joblib')
+            logger.info("Model trained and saved with 5 features to tmp_models/churn_prediction.joblib.")
+        else:
+            logger.warning("No data found for sklearn training.")
+    except Exception as e:
+        logger.error(f"Error training sklearn model: {e}")
+
+# ==========================================================================
 # MAIN
 # ==========================================================================
 if __name__ == "__main__":
     run_all_models()
+    train_sklearn_model_for_api()
