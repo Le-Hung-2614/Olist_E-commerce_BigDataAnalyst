@@ -14,7 +14,7 @@
   /* Text */
   --text-primary:   #344767;
   --text-secondary: #67748e;
-  --text-muted:     #a0aec0;
+  --text-muted:     #475569;
   --text-bright:    #2d3748;
 
   /* Accents (Material Palette) */
@@ -73,7 +73,6 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   line-height: 1.6;
-  zoom: 0.9;
 }
 
 /* Subtle background effect */

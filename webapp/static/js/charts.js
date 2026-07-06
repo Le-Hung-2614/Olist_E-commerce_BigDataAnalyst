@@ -59,7 +59,7 @@ const ChartTheme = (() => {
     plugins: {
       legend: {
         labels: {
-          color: '#94a3b8',
+          color: '#475569',
           font: { family: FONT_FAMILY, size: 11, weight: '500' },
           padding: 16,
           usePointStyle: true,
@@ -84,7 +84,7 @@ const ChartTheme = (() => {
       x: {
         grid: { color: 'rgba(0, 0, 0, 0.05)', drawBorder: false },
         ticks: {
-          color: '#a0aec0',
+          color: '#475569',
           font: { family: FONT_FAMILY, size: 10, weight: '500' },
           padding: 8,
         },
@@ -93,7 +93,7 @@ const ChartTheme = (() => {
       y: {
         grid: { color: 'rgba(0, 0, 0, 0.05)', drawBorder: false },
         ticks: {
-          color: '#a0aec0',
+          color: '#475569',
           font: { family: FONT_FAMILY, size: 10, weight: '500' },
           padding: 8,
         },
@@ -335,14 +335,14 @@ const ChartTheme = (() => {
           x: {
             title: {
               display: true, text: xLabel,
-              color: '#94a3b8',
+              color: '#475569',
               font: { family: FONT_FAMILY, size: 11, weight: '600' },
             },
           },
           y: {
             title: {
               display: true, text: yLabel,
-              color: '#94a3b8',
+              color: '#475569',
               font: { family: FONT_FAMILY, size: 11, weight: '600' },
             },
           },
@@ -371,7 +371,7 @@ const ChartTheme = (() => {
             angleLines: { color: 'rgba(148, 163, 184, 0.08)' },
             ticks: { display: false },
             pointLabels: {
-              color: '#94a3b8',
+              color: '#475569',
               font: { family: FONT_FAMILY, size: 10, weight: '500' },
             },
           },
@@ -380,7 +380,7 @@ const ChartTheme = (() => {
           legend: {
             position: 'bottom',
             labels: {
-              color: '#94a3b8',
+              color: '#475569',
               font: { family: FONT_FAMILY, size: 11, weight: '500' },
               padding: 16,
               usePointStyle: true,

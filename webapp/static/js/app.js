@@ -394,7 +394,11 @@
     if (data.length) {
       const scatterData = data
         .filter(d => d.avg_price && d.avg_review)
-        .map(d => ({ x: d.avg_price, y: d.avg_review, name: d.category }));
+        .map(d => ({ 
+          x: window.CURRENCY_MODE === 'VND' ? d.avg_price * 7500 : d.avg_price, 
+          y: d.avg_review, 
+          name: d.category || 'Unknown'
+        }));
 
       ChartTheme.createScatter('priceReviewScatter', [{
         label: 'Danh Mục',
@@ -404,10 +408,14 @@
         borderWidth: 1,
         pointRadius: 6,
         pointHoverRadius: 9,
-      }], window.CURRENCY_MODE === 'VND' ? 'Gia Trung Binh (VNĐ)' : 'Gia Trung Binh (BRL)', 'Danh Gia TB', 
+      }], window.CURRENCY_MODE === 'VND' ? 'Giá Trung Bình (VNĐ)' : 'Giá Trung Bình (BRL)', 'Đánh Giá TB', 
       (ctx) => {
-        const pt = ctx.raw;
-        return `${pt.name || 'Danh mục'}: ${formatCurrency(pt.x)}, ${pt.y.toFixed(2)} ⭐`;
+        const pt = ctx.raw || scatterData[ctx.dataIndex] || {};
+        const catName = pt.name || scatterData[ctx.dataIndex]?.name || 'Danh mục';
+        const formattedX = window.CURRENCY_MODE === 'VND' 
+            ? (pt.x || 0).toLocaleString('vi-VN') + ' ₫'
+            : 'R$ ' + (pt.x || 0).toLocaleString('pt-BR');
+        return `${catName}: ${formattedX}, ${pt.y.toFixed(2)} ⭐`;
       });
     }
 

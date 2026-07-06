@@ -718,9 +718,9 @@ def api_logistics_data():
 
         # 3. Delivery by State (Top 10 States with Most Orders)
         pipeline_state = [
-            {"$match": {"delivery_days": {"$ne": None}, "order_status": "delivered", "customer": {"$type": "array"}}},
+            {"$match": {"delivery_days": {"$ne": None}, "order_status": "delivered", "customer.customer_state": {"$exists": True}}},
             {"$group": {
-                "_id": {"$arrayElemAt": ["$customer", 3]},
+                "_id": "$customer.customer_state",
                 "avg_delivery": {"$avg": "$delivery_days"},
                 "count": {"$sum": 1}
             }},
@@ -733,10 +733,10 @@ def api_logistics_data():
 
         # 4. Review Score by Delivery Status
         pipeline_impact = [
-            {"$match": {"review": {"$type": "array"}, "delivery_status": {"$in": ["on_time", "late"]}}},
+            {"$match": {"review.review_score": {"$exists": True}, "delivery_status": {"$in": ["on_time", "late"]}}},
             {"$group": {
                 "_id": "$delivery_status",
-                "avg_score": {"$avg": {"$arrayElemAt": ["$review", 0]}}
+                "avg_score": {"$avg": "$review.review_score"}
             }}
         ]
         impact_res = list(orders_col.aggregate(pipeline_impact))
