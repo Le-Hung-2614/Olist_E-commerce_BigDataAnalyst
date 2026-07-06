@@ -302,6 +302,11 @@ def train_churn_prediction(merged_df, rfm_df, spark):
     logger.info(f"  Churn=1 (roi bo): {churn_1:,}, Churn=0 (giu lai): {churn_0:,}")
     logger.info(f"  Features ({len(feature_cols)}): {feature_cols}")
 
+    # Can bang du lieu bang Class Weights
+    w_1 = data_count / (2 * churn_1) if churn_1 > 0 else 1.0
+    w_0 = data_count / (2 * churn_0) if churn_0 > 0 else 1.0
+    ml_df = ml_df.withColumn("weight", F.when(F.col("label") == 1.0, w_1).otherwise(w_0))
+
     # --- Train/Test split ---
     train_df, test_df = ml_df.randomSplit([0.8, 0.2], seed=42)
     logger.info(f"  Train: {train_df.count():,}, Test: {test_df.count():,}")
@@ -314,8 +319,8 @@ def train_churn_prediction(merged_df, rfm_df, spark):
 
     # --- Random Forest Classifier ---
     rf = RandomForestClassifier(
-        featuresCol="features", labelCol="label",
-        numTrees=50, maxDepth=8, seed=42
+        featuresCol="features", labelCol="label", weightCol="weight",
+        numTrees=50, maxDepth=6, seed=42
     )
     rf_pipeline = Pipeline(stages=[assembler, rf])
 
@@ -325,7 +330,7 @@ def train_churn_prediction(merged_df, rfm_df, spark):
 
     # --- Logistic Regression ---
     lr = LogisticRegression(
-        featuresCol="features", labelCol="label",
+        featuresCol="features", labelCol="label", weightCol="weight",
         maxIter=100, regParam=0.01
     )
     lr_pipeline = Pipeline(stages=[assembler, lr])

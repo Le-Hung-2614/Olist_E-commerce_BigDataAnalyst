@@ -104,6 +104,16 @@ const ChartTheme = (() => {
 
   // ── Factory Functions ───────────────────────────────────────────
 
+  const chartInstances = {};
+
+  function registerChart(canvasId, chart) {
+    if (chartInstances[canvasId]) {
+      chartInstances[canvasId].destroy();
+    }
+    chartInstances[canvasId] = chart;
+    return chart;
+  }
+
   /**
    * Line chart (e.g., revenue trend)
    */
@@ -112,7 +122,7 @@ const ChartTheme = (() => {
     if (!ctx) return null;
     const context = ctx.getContext('2d');
 
-    return new Chart(ctx, {
+    return registerChart(canvasId, new Chart(ctx, {
       type: 'line',
       data: {
         labels,
@@ -149,7 +159,7 @@ const ChartTheme = (() => {
           },
         },
       }),
-    });
+    }));
   }
 
   /**
@@ -167,7 +177,7 @@ const ChartTheme = (() => {
       ? Array(labels.length).fill(color)
       : labels.map((_, i) => PALETTE[i % PALETTE.length]);
 
-    return new Chart(ctx, {
+    return registerChart(canvasId, new Chart(ctx, {
       type: 'bar',
       data: {
         labels,
@@ -193,7 +203,7 @@ const ChartTheme = (() => {
           },
         },
       }),
-    });
+    }));
   }
 
   /**
@@ -203,7 +213,7 @@ const ChartTheme = (() => {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return null;
 
-    return new Chart(ctx, {
+    return registerChart(canvasId, new Chart(ctx, {
       type: 'bar',
       data: {
         labels,
@@ -227,7 +237,7 @@ const ChartTheme = (() => {
           },
         },
       }),
-    });
+    }));
   }
 
   /**
@@ -237,7 +247,7 @@ const ChartTheme = (() => {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return null;
 
-    return new Chart(ctx, {
+    return registerChart(canvasId, new Chart(ctx, {
       type: 'doughnut',
       data: {
         labels,
@@ -268,7 +278,7 @@ const ChartTheme = (() => {
           tooltip: DEFAULT_OPTIONS.plugins.tooltip,
         },
       },
-    });
+    }));
   }
 
   /**
@@ -278,7 +288,7 @@ const ChartTheme = (() => {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return null;
 
-    return new Chart(ctx, {
+    return registerChart(canvasId, new Chart(ctx, {
       type: 'pie',
       data: {
         labels,
@@ -307,7 +317,7 @@ const ChartTheme = (() => {
           tooltip: DEFAULT_OPTIONS.plugins.tooltip,
         },
       },
-    });
+    }));
   }
 
   /**
@@ -326,7 +336,7 @@ const ChartTheme = (() => {
       };
     }
 
-    return new Chart(ctx, {
+    return registerChart(canvasId, new Chart(ctx, {
       type: 'scatter',
       data: { datasets },
       options: deepMerge({}, DEFAULT_OPTIONS, {
@@ -348,7 +358,7 @@ const ChartTheme = (() => {
           },
         },
       }),
-    });
+    }));
   }
 
   /**
@@ -358,7 +368,7 @@ const ChartTheme = (() => {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return null;
 
-    return new Chart(ctx, {
+    return registerChart(canvasId, new Chart(ctx, {
       type: 'radar',
       data: { labels, datasets },
       options: {
@@ -389,7 +399,7 @@ const ChartTheme = (() => {
           tooltip: DEFAULT_OPTIONS.plugins.tooltip,
         },
       },
-    });
+    }));
   }
 
   /**
@@ -399,7 +409,7 @@ const ChartTheme = (() => {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return null;
 
-    return new Chart(ctx, {
+    return registerChart(canvasId, new Chart(ctx, {
       type: 'bar',
       data: { labels, datasets },
       options: deepMerge({}, DEFAULT_OPTIONS, {
@@ -414,7 +424,7 @@ const ChartTheme = (() => {
           },
         },
       }),
-    });
+    }));
   }
 
   // ── Utility ─────────────────────────────────────────────────────
