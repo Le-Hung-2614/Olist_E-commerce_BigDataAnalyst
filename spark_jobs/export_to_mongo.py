@@ -98,20 +98,17 @@ def create_spark_session():
 
 
 def _spark_df_to_pandas_safe(spark_df):
-    """
-    Chuyển Spark DataFrame sang pandas một cách an toàn.
-
-    Ép các cột timestamp/date thành string TRƯỚC khi gọi toPandas(),
-    rồi parse lại bằng pandas - tránh lỗi pytz khi Spark cố tự
-    tz_localize() timestamp (đã từng gặp UnknownTimeZoneError với
-    "GMT+07:00" trên Windows).
-    """
-    from pyspark.sql.types import TimestampType, DateType
+    from pyspark.sql.types import TimestampType, DateType, StructType
 
     ts_cols = [
         f.name for f in spark_df.schema.fields
         if isinstance(f.dataType, (TimestampType, DateType))
     ]
+    struct_cols = [
+        f.name for f in spark_df.schema.fields
+        if isinstance(f.dataType, StructType)
+    ]
+
     df_to_convert = spark_df
     for c in ts_cols:
         df_to_convert = df_to_convert.withColumn(c, F.col(c).cast("string"))
@@ -120,6 +117,9 @@ def _spark_df_to_pandas_safe(spark_df):
 
     for c in ts_cols:
         pdf[c] = pd.to_datetime(pdf[c], errors="coerce")
+
+    for c in struct_cols:
+        pdf[c] = pdf[c].apply(lambda r: r.asDict(recursive=True) if r is not None else None)
 
     return pdf
 

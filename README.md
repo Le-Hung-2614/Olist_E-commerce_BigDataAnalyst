@@ -51,7 +51,7 @@ Hệ thống được thiết kế theo tiêu chuẩn Data Lake / Data Warehouse
 ## ⚙️ Quy Trình Hoạt Động (Workflow)
 
 1. **Data Ingestion (Thu thập):** Apache Spark đọc hàng triệu bản ghi từ các file CSV.
-2. **Data Pipeline (Xử lý):** File `data_processing.py` chạy qua các pipeline làm sạch dữ liệu, tạo bảng kết hợp và lưu các báo cáo tổng hợp vào MongoDB.
+2. **Data Pipeline (Xử lý):** File `etl.py`, `export_to_mongo.py` chạy qua các pipeline làm sạch dữ liệu, tạo bảng kết hợp và lưu các báo cáo tổng hợp vào MongoDB.
 3. **Machine Learning Training:** File `ml_models.py` lấy dữ liệu sạch, sử dụng `RandomForestClassifier` và `LogisticRegression` để học quy luật rời bỏ của khách hàng. Nó xuất ra file `churn_prediction.joblib`.
 4. **Data Serving & Visualization:** Web App (`Flask`) kết nối vào MongoDB để đổ dữ liệu ra các biểu đồ Chart.js tuyệt đẹp và tải mô hình `.joblib` lên để cho phép dự đoán trực tiếp ngay trên web.
 
@@ -90,7 +90,7 @@ pip install pyspark pymongo pandas numpy scikit-learn joblib Flask
 
 # Hướng Dẫn Cách Chạy (How to Run)
 
-## 1. Set biến môi trường (mỗi lần mở terminal mới)
+## 1. Set biến môi trường (mỗi lần mở terminal mới (Powershell))
 $env:JAVA_HOME = "C:\Java\jdk1.8.0_491"
 $env:HADOOP_HOME = "C:\hadoop"
 
@@ -103,7 +103,7 @@ $env:HADOOP_HOME = "C:\hadoop"
 & hdfs dfs -ls /
 
 ## 5. Nếu thành công → chạy file tạo thư mục vào HDFS
-cd C:\Users\Admin\.gemini\antigravity\scratch\olist-bigdata-project
+cd C:\olist-bigdata-project
 python spark_jobs/ingestion.py
 
 ## 7. Chạy ETL

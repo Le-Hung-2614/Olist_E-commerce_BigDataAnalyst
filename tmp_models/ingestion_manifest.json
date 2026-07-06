@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-07-04T19:40:11.385174",
-  "source_dir": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\data",
+  "timestamp": "2026-07-06T15:42:42.701745",
+  "source_dir": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\data",
   "hdfs_target": "/user/bigdata/olist/bronze",
   "files": {
     "olist_orders_dataset.csv": {
       "filename": "olist_orders_dataset.csv",
-      "filepath": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\spark_jobs\\..\\data\\olist_orders_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\spark_jobs\\..\\data\\olist_orders_dataset.csv",
       "valid": true,
       "row_count": 99441,
       "column_count": 8,
@@ -29,7 +29,7 @@
     },
     "olist_order_items_dataset.csv": {
       "filename": "olist_order_items_dataset.csv",
-      "filepath": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\spark_jobs\\..\\data\\olist_order_items_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\spark_jobs\\..\\data\\olist_order_items_dataset.csv",
       "valid": true,
       "row_count": 112650,
       "column_count": 7,
@@ -52,7 +52,7 @@
     },
     "olist_order_payments_dataset.csv": {
       "filename": "olist_order_payments_dataset.csv",
-      "filepath": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\spark_jobs\\..\\data\\olist_order_payments_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\spark_jobs\\..\\data\\olist_order_payments_dataset.csv",
       "valid": true,
       "row_count": 103886,
       "column_count": 5,
@@ -73,7 +73,7 @@
     },
     "olist_order_reviews_dataset.csv": {
       "filename": "olist_order_reviews_dataset.csv",
-      "filepath": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\spark_jobs\\..\\data\\olist_order_reviews_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\spark_jobs\\..\\data\\olist_order_reviews_dataset.csv",
       "valid": false,
       "row_count": 99224,
       "column_count": 7,
@@ -98,7 +98,7 @@
     },
     "olist_customers_dataset.csv": {
       "filename": "olist_customers_dataset.csv",
-      "filepath": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\spark_jobs\\..\\data\\olist_customers_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\spark_jobs\\..\\data\\olist_customers_dataset.csv",
       "valid": true,
       "row_count": 99441,
       "column_count": 5,
@@ -119,7 +119,7 @@
     },
     "olist_products_dataset.csv": {
       "filename": "olist_products_dataset.csv",
-      "filepath": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\spark_jobs\\..\\data\\olist_products_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\spark_jobs\\..\\data\\olist_products_dataset.csv",
       "valid": true,
       "row_count": 32951,
       "column_count": 9,
@@ -146,7 +146,7 @@
     },
     "olist_sellers_dataset.csv": {
       "filename": "olist_sellers_dataset.csv",
-      "filepath": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\spark_jobs\\..\\data\\olist_sellers_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\spark_jobs\\..\\data\\olist_sellers_dataset.csv",
       "valid": true,
       "row_count": 3095,
       "column_count": 4,
@@ -166,7 +166,7 @@
     },
     "olist_geolocation_dataset.csv": {
       "filename": "olist_geolocation_dataset.csv",
-      "filepath": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\spark_jobs\\..\\data\\olist_geolocation_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\spark_jobs\\..\\data\\olist_geolocation_dataset.csv",
       "valid": true,
       "row_count": 1000163,
       "column_count": 5,
@@ -187,7 +187,7 @@
     },
     "product_category_name_translation.csv": {
       "filename": "product_category_name_translation.csv",
-      "filepath": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\olist-bigdata-project\\spark_jobs\\..\\data\\product_category_name_translation.csv",
+      "filepath": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\spark_jobs\\..\\data\\product_category_name_translation.csv",
       "valid": true,
       "row_count": 71,
       "column_count": 2,
@@ -209,6 +209,6 @@
     "valid_files": 8,
     "uploaded_files": 9,
     "total_rows": 1550922,
-    "duration_seconds": 119.9
+    "duration_seconds": 93.3
   }
 }
