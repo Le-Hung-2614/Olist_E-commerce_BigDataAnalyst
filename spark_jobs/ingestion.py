@@ -36,7 +36,7 @@ logger = logging.getLogger("OlistIngestion")
 # ============================================================================
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 HDFS_BRONZE = "/user/bigdata/olist/bronze"
-HADOOP_CMD = "C:/hadoop/bin/hadoop.cmd"
+HADOOP_CMD = "hadoop"
 MANIFEST_PATH = os.path.join(os.path.dirname(__file__), "..", "tmp_models", "ingestion_manifest.json")
 
 # Schema definitions: file -> (hdfs_subfolder, required_columns)
@@ -194,7 +194,7 @@ def validate_csv(filepath, schema):
 # ============================================================================
 def hdfs_mkdir(path):
     """Create HDFS directory."""
-    cmd = [HADOOP_CMD, "dfs", "-mkdir", "-p", path]
+    cmd = [HADOOP_CMD, "fs", "-mkdir", "-p", path]
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0 and "already exists" not in result.stderr:
         logger.warning(f"  HDFS mkdir warning: {result.stderr[:200]}")
@@ -204,11 +204,11 @@ def hdfs_upload(local_path, hdfs_path):
     """Upload a local file to HDFS, overwriting if exists."""
     # Remove existing file first
     subprocess.run(
-        [HADOOP_CMD, "dfs", "-rm", "-f", hdfs_path],
+        [HADOOP_CMD, "fs", "-rm", "-f", hdfs_path],
         capture_output=True, text=True
     )
     # Upload
-    cmd = [HADOOP_CMD, "dfs", "-put", "-f", local_path, hdfs_path]
+    cmd = [HADOOP_CMD, "fs", "-put", "-f", local_path, hdfs_path]
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(f"HDFS upload failed: {result.stderr[:300]}")
