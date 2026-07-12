@@ -1071,3 +1071,73 @@ body.sidebar-collapsed .sidebar-footer {
 .main-content {
   transition: margin-left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* ═════════════════════════════════════════════════════════════════
+   SEARCH & PAGINATION
+   ═════════════════════════════════════════════════════════════════ */
+.search-container {
+  display: flex;
+  align-items: center;
+}
+
+.search-input {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  outline: none;
+  transition: all 0.2s ease;
+  width: 250px;
+}
+
+.search-input:focus {
+  border-color: var(--accent-purple);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--border-color);
+  margin-top: 0.5rem;
+}
+
+.page-btn {
+  background: #fff;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.page-btn:hover:not(.disabled):not(.active) {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
+}
+
+.page-btn.active {
+  background: var(--grad-purple);
+  color: #fff;
+  border-color: transparent;
+  font-weight: bold;
+}
+
+.page-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f8f9fa;
+}
+
+.page-dots {
+  color: var(--text-muted);
+  padding: 0 0.5rem;
+}

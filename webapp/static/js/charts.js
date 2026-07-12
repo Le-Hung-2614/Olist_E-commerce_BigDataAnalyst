@@ -177,6 +177,8 @@ const ChartTheme = (() => {
       ? Array(labels.length).fill(color)
       : labels.map((_, i) => PALETTE[i % PALETTE.length]);
 
+    const isCurrency = label.toLowerCase().includes('doanh thu') || label.toLowerCase().includes('revenue');
+
     return registerChart(canvasId, new Chart(ctx, {
       type: 'bar',
       data: {
@@ -194,12 +196,21 @@ const ChartTheme = (() => {
       options: deepMerge({}, DEFAULT_OPTIONS, {
         plugins: { 
           legend: { display: false },
-          tooltip: tooltipCallback ? { callbacks: { label: tooltipCallback } } : undefined
+          tooltip: tooltipCallback ? { callbacks: { label: tooltipCallback } } : {
+            callbacks: {
+              label: (c) => {
+                if (isCurrency) {
+                  return `${c.dataset.label}: ${formatNumber(c.raw)} ${window.CURRENCY_MODE === 'VND' ? 'VNĐ' : 'BRL'}`;
+                }
+                return `${c.dataset.label}: ${Number(c.raw).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}`;
+              }
+            }
+          }
         },
         scales: {
           y: {
             beginAtZero: true,
-            ticks: { callback: (v) => formatCompact(v) },
+            ticks: { callback: (v) => formatCompact(v, isCurrency) },
           },
         },
       }),
@@ -209,31 +220,44 @@ const ChartTheme = (() => {
   /**
    * Horizontal bar chart
    */
-  function createHorizontalBar(canvasId, labels, data, label = 'Value') {
+  function createHorizontalBar(canvasId, labels, data, label = 'Value', color = null) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return null;
+    const colors = color
+      ? Array(labels.length).fill(color)
+      : labels.map((_, i) => withAlpha(PALETTE[i % PALETTE.length], 0.75));
+
+    const isCurrency = label.toLowerCase().includes('doanh thu') || label.toLowerCase().includes('revenue');
 
     return registerChart(canvasId, new Chart(ctx, {
       type: 'bar',
       data: {
         labels,
         datasets: [{
-          label,
-          data,
-          backgroundColor: labels.map((_, i) => withAlpha(PALETTE[i % PALETTE.length], 0.7)),
-          borderColor: labels.map((_, i) => PALETTE[i % PALETTE.length]),
-          borderWidth: 1,
-          borderRadius: 6,
-          borderSkipped: false,
+          label, data,
+          backgroundColor: colors,
+          borderRadius: 4,
         }],
       },
       options: deepMerge({}, DEFAULT_OPTIONS, {
         indexAxis: 'y',
-        plugins: { legend: { display: false } },
+        plugins: { 
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (c) => {
+                if (isCurrency) {
+                  return `${c.dataset.label}: ${formatNumber(c.raw)} ${window.CURRENCY_MODE === 'VND' ? 'VNĐ' : 'BRL'}`;
+                }
+                return `${c.dataset.label}: ${Number(c.raw).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}`;
+              }
+            }
+          }
+        },
         scales: {
           x: {
             beginAtZero: true,
-            ticks: { callback: (v) => formatCompact(v) },
+            ticks: { callback: (v) => formatCompact(v, isCurrency) },
           },
         },
       }),
@@ -447,17 +471,17 @@ const ChartTheme = (() => {
     return Number(val).toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   }
 
-  function formatCompact(n) {
-    let val = convertCur(n);
+  function formatCompact(n, isCurrency = true) {
+    let val = isCurrency ? convertCur(n) : n;
     const isVND = window.CURRENCY_MODE === 'VND';
-    if (isVND) {
+    if (isCurrency && isVND) {
       if (val >= 1e9) return (val / 1e9).toFixed(1) + ' Tỷ';
       if (val >= 1e6) return (val / 1e6).toFixed(1) + ' Tr';
     } else {
       if (val >= 1e6) return (val / 1e6).toFixed(1) + 'M';
       if (val >= 1e3) return (val / 1e3).toFixed(1) + 'K';
     }
-    return val.toString();
+    return Number(val).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
   }
 
   function deepMerge(target, ...sources) {

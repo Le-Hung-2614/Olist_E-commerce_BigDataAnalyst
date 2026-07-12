@@ -25,15 +25,18 @@
 </div>
 
 <div class="card animate-in" style="--delay:.4s">
-  <div class="card-header">
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
     <h3> Top Khách Hàng Theo Phân Khúc</h3>
+    <div class="search-container">
+      <input type="text" id="segmentSearchInput" placeholder="Nhập mã khách hàng..." class="search-input">
+    </div>
   </div>
   <div class="card-body">
     <div class="table-container">
       <table class="data-table" id="segmentTable">
         <thead>
           <tr>
-            <th>Mã KH</th>
+            <th>MÃ KH</th>
             <th>Phân Khúc</th>
             <th>Thành Phố</th>
             <th>Bang</th>
@@ -46,6 +49,9 @@
           <tr><td colspan="7" class="loading-cell">Đang tải dữ liệu...</td></tr>
         </tbody>
       </table>
+    </div>
+    <div class="pagination-container" id="segmentPagination">
+      <!-- Pagination buttons will be injected here by JS -->
     </div>
   </div>
 </div>

@@ -242,10 +242,31 @@
       ChartTheme.createScatter('rfmScatter', datasets, 'Recency (ngay)', window.CURRENCY_MODE === 'VND' ? 'Tong chi (VNĐ)' : 'Tong chi (BRL)');
     }
 
-    // Table
-    if (data.top_customers && data.top_customers.length) {
-      const tbody = document.getElementById('segmentTableBody');
-      tbody.innerHTML = data.top_customers.map(c => `
+    // Load table data separately
+    loadSegmentTable(1, '');
+    
+    // Add event listener for search input
+    const searchInput = document.getElementById('segmentSearchInput');
+    if (searchInput) {
+      let timeout = null;
+      searchInput.addEventListener('input', (e) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          loadSegmentTable(1, e.target.value);
+        }, 500); // Debounce 500ms
+      });
+    }
+  }
+
+  window.loadSegmentTable = async function(page, search) {
+    const tbody = document.getElementById('segmentTableBody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">Đang tải dữ liệu...</td></tr>';
+    
+    const data = await fetchJSON(`/api/customers/segment?page=${page}&limit=10&search=${encodeURIComponent(search)}`);
+    if (!data) return;
+
+    if (data.data && data.data.length && tbody) {
+      tbody.innerHTML = data.data.map(c => `
         <tr>
           <td>${truncate(c.customer_id, 12)}</td>
           <td><span class="seg-badge ${segmentBadgeClass(translateSegment(c.segment))}">${translateSegment(c.segment) || '—'}</span></td>
@@ -256,7 +277,14 @@
           <td>${c.monetary != null ? formatCurrency(c.monetary) : '—'}</td>
         </tr>
       `).join('');
+    } else if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;">Không tìm thấy kết quả</td></tr>';
     }
+
+    // Render pagination
+    renderPagination('segmentPagination', data.page, data.total_pages, (newPage) => {
+      loadSegmentTable(newPage, search);
+    });
   }
 
 
@@ -325,10 +353,31 @@
       ]);
     }
 
-    // High-risk table
-    if (data.high_risk && data.high_risk.length) {
-      const tbody = document.getElementById('highRiskBody');
-      tbody.innerHTML = data.high_risk.map(c => {
+    // Load table data separately
+    loadChurnTable(1, '');
+    
+    // Add event listener for search input
+    const searchInput = document.getElementById('churnSearchInput');
+    if (searchInput) {
+      let timeout = null;
+      searchInput.addEventListener('input', (e) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          loadChurnTable(1, e.target.value);
+        }, 500); // Debounce 500ms
+      });
+    }
+  }
+
+  window.loadChurnTable = async function(page, search) {
+    const tbody = document.getElementById('highRiskBody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">Đang tải dữ liệu...</td></tr>';
+    
+    const data = await fetchJSON(`/api/customers/churn?page=${page}&limit=10&search=${encodeURIComponent(search)}`);
+    if (!data) return;
+
+    if (data.data && data.data.length && tbody) {
+      tbody.innerHTML = data.data.map(c => {
         const pb = probBadge(c.churn_probability);
         return `
           <tr>
@@ -341,7 +390,70 @@
             <td>${c.recency != null ? c.recency : '—'}</td>
           </tr>`;
       }).join('');
+    } else if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;">Không tìm thấy kết quả</td></tr>';
     }
+
+    // Render pagination
+    renderPagination('churnPagination', data.page, data.total_pages, (newPage) => {
+      loadChurnTable(newPage, search);
+    });
+  }
+
+  function renderPagination(containerId, currentPage, totalPages, onPageClick) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    if (totalPages <= 1) {
+      container.innerHTML = '';
+      return;
+    }
+
+    let html = '';
+    
+    // Prev button
+    if (currentPage > 1) {
+      html += `<button class="page-btn" data-page="${currentPage - 1}">&laquo;</button>`;
+    } else {
+      html += `<button class="page-btn disabled" disabled>&laquo;</button>`;
+    }
+
+    // Page numbers
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+    
+    if (startPage > 1) {
+      html += `<button class="page-btn" data-page="1">1</button>`;
+      if (startPage > 2) html += `<span class="page-dots">...</span>`;
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) html += `<span class="page-dots">...</span>`;
+      html += `<button class="page-btn" data-page="${totalPages}">${totalPages}</button>`;
+    }
+
+    // Next button
+    if (currentPage < totalPages) {
+      html += `<button class="page-btn" data-page="${currentPage + 1}">&raquo;</button>`;
+    } else {
+      html += `<button class="page-btn disabled" disabled>&raquo;</button>`;
+    }
+
+    container.innerHTML = html;
+    
+    // Add click events
+    container.querySelectorAll('button[data-page]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!btn.classList.contains('disabled')) {
+          onPageClick(parseInt(btn.getAttribute('data-page')));
+        }
+      });
+    });
+
   }
 
 

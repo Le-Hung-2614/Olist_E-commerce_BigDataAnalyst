@@ -757,6 +757,100 @@ def api_logistics_data():
         return jsonify({"error": str(e)}), 500
 
 
+# ====================================================================
+#  API - Customer Table Pagination & Search
+# ====================================================================
+@app.route("/api/customers/segment")
+def api_customers_segment():
+    try:
+        page = int(request.args.get("page", 1))
+        limit = int(request.args.get("limit", 10))
+        search = request.args.get("search", "").strip()
+
+        query = {"monetary": {"$exists": True}}
+        if search:
+            query["customer_unique_id"] = {"$regex": search, "$options": "i"}
+
+        total_docs = customers_col.count_documents(query)
+        total_pages = math.ceil(total_docs / limit) if limit > 0 else 1
+
+        pipeline = [
+            {"$match": query},
+            {"$sort": {"monetary": -1}},
+            {"$skip": (page - 1) * limit},
+            {"$limit": limit},
+            {"$project": {
+                "_id": 0,
+                "customer_id": "$customer_unique_id",
+                "segment": "$segment_name",
+                "city": "$customer_city",
+                "state": "$customer_state",
+                "recency": 1, "frequency": 1, "monetary": 1
+            }}
+        ]
+        customers = list(customers_col.aggregate(pipeline))
+
+        return jsonify({
+            "data": _json(customers),
+            "page": page,
+            "total_pages": total_pages,
+            "total_records": total_docs
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/customers/churn")
+def api_customers_churn():
+    try:
+        page = int(request.args.get("page", 1))
+        limit = int(request.args.get("limit", 10))
+        search = request.args.get("search", "").strip()
+
+        query = {"churn_probability": {"$exists": True, "$gt": 0}}
+        if search:
+            query["customer_unique_id"] = {"$regex": search, "$options": "i"}
+
+        total_docs = customers_col.count_documents(query)
+        total_pages = math.ceil(total_docs / limit) if limit > 0 else 1
+
+        pipeline = [
+            {"$match": query},
+            {"$sort": {"churn_probability": -1}},
+            {"$skip": (page - 1) * limit},
+            {"$limit": limit},
+            {"$project": {
+                "_id": 0,
+                "customer_id": "$customer_unique_id",
+                "segment": "$segment_name",
+                "churn_probability": 1, 
+                "city": "$customer_city",
+                "state": "$customer_state", 
+                "monetary": 1, "recency": 1
+            }}
+        ]
+        
+        customers = list(customers_col.aggregate(pipeline))
+        
+        high_risk_clean = [{
+            "customer_id": r.get("customer_id", ""),
+            "segment": r.get("segment", ""),
+            "churn_probability": _safe_round(float(r.get("churn_probability", 0) or 0)),
+            "city": r.get("city", ""),
+            "state": r.get("state", ""),
+            "monetary": _safe_round(float(r.get("monetary", 0) or 0)),
+            "recency": int(float(r.get("recency", 0) or 0)),
+        } for r in customers]
+
+        return jsonify({
+            "data": _json(high_risk_clean),
+            "page": page,
+            "total_pages": total_pages,
+            "total_records": total_docs
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # -- Error Handlers --
 @app.errorhandler(404)
 def not_found(e):
