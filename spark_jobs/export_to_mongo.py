@@ -20,7 +20,7 @@ from pymongo import MongoClient
 
 # Set PYSPARK_PYTHON bằng FULL PATH, dùng Python 3.12 (đã xác nhận có đủ
 # pyspark + pandas + pyarrow trên máy này).
-PYTHON_PATH = "C:/Users/Admin/AppData/Local/Programs/Python/Python312/python.exe"
+PYTHON_PATH = "/usr/bin/python3"
 os.environ["PYSPARK_PYTHON"] = PYTHON_PATH
 os.environ["PYSPARK_DRIVER_PYTHON"] = PYTHON_PATH
 os.environ["SPARK_LOCAL_IP"] = "127.0.0.1"
