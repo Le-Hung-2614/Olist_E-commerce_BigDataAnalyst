@@ -21,7 +21,7 @@
   }
 
   window.CURRENCY_MODE = localStorage.getItem('currency_mode') || 'BRL';
-  const VND_RATE = 4500; // 1 BRL ~ 4500 VND
+  const VND_RATE = 5140; // 1 BRL ~ 5140 VND
 
   function convertCur(n) { return window.CURRENCY_MODE === 'VND' ? n * VND_RATE : n; }
 
@@ -213,6 +213,15 @@
 
     // Doughnut
     if (data.distribution && data.distribution.length) {
+      const order = ['Champions', 'Loyal', 'At Risk', 'Lost'];
+      data.distribution.sort((a, b) => {
+        let idxA = order.indexOf(a.segment);
+        let idxB = order.indexOf(b.segment);
+        if (idxA === -1) idxA = 99;
+        if (idxB === -1) idxB = 99;
+        return idxA - idxB;
+      });
+
       ChartTheme.createDoughnut(
         'segmentDoughnut',
         data.distribution.map(d => translateSegment(d.segment || 'N/A')),
@@ -223,6 +232,11 @@
     // RFM Scatter
     if (data.rfm && data.rfm.length) {
       const segGroups = {};
+      const order = ['Champions', 'Loyal', 'At Risk', 'Lost'];
+      order.forEach(seg => {
+        segGroups[translateSegment(seg)] = [];
+      });
+      
       data.rfm.forEach(c => {
         const seg = translateSegment(c.segment || 'Unknown');
         if (!segGroups[seg]) segGroups[seg] = [];
@@ -239,7 +253,40 @@
         pointHoverRadius: 7,
       }));
 
-      ChartTheme.createScatter('rfmScatter', datasets, 'Recency (ngay)', window.CURRENCY_MODE === 'VND' ? 'Tong chi (VNĐ)' : 'Tong chi (BRL)');
+      ChartTheme.createScatter('rfmScatter', datasets, 'Recency (ngày)', window.CURRENCY_MODE === 'VND' ? 'Tổng chi (VNĐ)' : 'Tổng chi (BRL)');
+    }
+
+    // Trend by Segment
+    if (data.trend_data && data.trend_data.length) {
+      // Group by segment
+      const segData = {};
+      const order = ['Champions', 'Loyal', 'At Risk', 'Lost'];
+      order.forEach(seg => {
+        segData[translateSegment(seg)] = {};
+      });
+
+      // Get unique months sorted
+      const months = [...new Set(data.trend_data.map(d => d.month))].sort();
+
+      data.trend_data.forEach(d => {
+        const seg = translateSegment(d.segment || 'Unknown');
+        if (!segData[seg]) segData[seg] = {};
+        segData[seg][d.month] = d.count;
+      });
+
+      const datasets = Object.keys(segData).map((seg, i) => {
+        const lineData = months.map(m => segData[seg][m] || 0);
+        return {
+          label: seg,
+          data: lineData,
+          borderColor: ChartTheme.PALETTE[i % ChartTheme.PALETTE.length],
+          backgroundColor: ChartTheme.withAlpha(ChartTheme.PALETTE[i % ChartTheme.PALETTE.length], 0.1),
+          fill: false,
+          tension: 0.4
+        };
+      });
+
+      ChartTheme.createMultiLineChart('segmentTrendChart', months, datasets);
     }
 
     // Load table data separately
@@ -268,7 +315,7 @@
     if (data.data && data.data.length && tbody) {
       tbody.innerHTML = data.data.map(c => `
         <tr>
-          <td>${truncate(c.customer_id, 12)}</td>
+          <td title="${c.customer_id}" style="cursor: pointer; color: var(--primary);" onclick="navigator.clipboard.writeText('${c.customer_id}').then(()=>alert('Đã copy mã khách hàng!'))" class="hover-copy">${truncate(c.customer_id, 12)}</td>
           <td><span class="seg-badge ${segmentBadgeClass(translateSegment(c.segment))}">${translateSegment(c.segment) || '—'}</span></td>
           <td>${c.city || '—'}</td>
           <td title="${getFullStateName(c.state)}">${c.state || '—'}</td>
@@ -326,31 +373,15 @@
       );
     }
 
-    // Model comparison
-    const mc = data.model_comparison;
-    if (mc && mc.models && mc.models.length >= 2) {
-      const metrics = ['accuracy', 'precision', 'recall', 'f1', 'auc'];
-      const labels = metrics.map(m => m.toUpperCase());
-      const dsArr = mc.models.map((mdl, i) => ({
-        label: mdl.name,
-        data: metrics.map(m => mdl[m] || 0),
-        backgroundColor: ChartTheme.withAlpha(ChartTheme.PALETTE[i], 0.7),
-        borderColor: ChartTheme.PALETTE[i],
-        borderWidth: 1,
-        borderRadius: 6,
-      }));
-      ChartTheme.createGroupedBar('modelCompare', labels, dsArr);
-    } else {
-      // Provide defaults
-      const labels = ['ACCURACY', 'PRECISION', 'RECALL', 'F1', 'AUC'];
-      ChartTheme.createGroupedBar('modelCompare', labels, [
-        { label: 'Random Forest', data: [0.87, 0.85, 0.82, 0.83, 0.91],
-          backgroundColor: ChartTheme.withAlpha(ChartTheme.COLORS.purple, 0.7),
-          borderColor: ChartTheme.COLORS.purple, borderWidth: 1, borderRadius: 6 },
-        { label: 'Logistic Regression', data: [0.82, 0.80, 0.78, 0.79, 0.86],
-          backgroundColor: ChartTheme.withAlpha(ChartTheme.COLORS.cyan, 0.7),
-          borderColor: ChartTheme.COLORS.cyan, borderWidth: 1, borderRadius: 6 },
-      ]);
+    // Top 5 States by Churn
+    if (data.by_state && data.by_state.length) {
+      ChartTheme.createBarChart(
+        'churnByState',
+        data.by_state.map(d => getFullStateName(d.state)),
+        data.by_state.map(d => d.churned),
+        'Số khách rời bỏ',
+        null
+      );
     }
 
     // Load table data separately
@@ -381,7 +412,7 @@
         const pb = probBadge(c.churn_probability);
         return `
           <tr>
-            <td>${truncate(c.customer_id, 12)}</td>
+            <td title="${c.customer_id}" style="cursor: pointer; color: var(--primary);" onclick="navigator.clipboard.writeText('${c.customer_id}').then(()=>alert('Đã copy mã khách hàng!'))" class="hover-copy">${truncate(c.customer_id, 12)}</td>
             <td><span class="seg-badge ${segmentBadgeClass(translateSegment(c.segment))}">${translateSegment(c.segment) || '—'}</span></td>
             <td>${c.city || '—'}</td>
             <td title="${getFullStateName(c.state)}">${c.state || '—'}</td>
@@ -699,6 +730,12 @@
   //  PAGE: ML Models
   // ═════════════════════════════════════════════════════════════════
   async function initModels() {
+    // Update currency labels on the models page
+    const curLabels = document.querySelectorAll('.currency-label-models');
+    curLabels.forEach(el => {
+      el.textContent = window.CURRENCY_MODE === 'VND' ? 'VND' : 'BRL';
+    });
+
     const data = await fetchJSON('/api/models');
     if (!data || !data.models) return;
 
@@ -730,11 +767,14 @@
       );
     }
 
-    // Metrics table
+    const clsModels = models.filter(m => !m.is_regression);
+    const regModels = models.filter(m => m.is_regression);
+
+    // Metrics table (Classification)
     const tbody = document.getElementById('metricsBody');
     if (tbody) {
       const fmt = (v) => (v == null || isNaN(v)) ? '—' : (v * 100).toFixed(1) + '%';
-      tbody.innerHTML = models.map(m => `
+      tbody.innerHTML = clsModels.map(m => `
         <tr>
           <td style="color:var(--text-bright);font-weight:600">${m.name || '—'}</td>
           <td>${fmt(m.accuracy)}</td>
@@ -742,9 +782,21 @@
           <td>${fmt(m.recall)}</td>
           <td>${fmt(m.f1)}</td>
           <td>${fmt(m.auc)}</td>
-          <td>${m.rmse != null ? m.rmse.toFixed(3) : '—'}</td>
         </tr>
-      `).join('')
+      `).join('') || `<tr><td colspan="6" style="text-align:center">Không có dữ liệu</td></tr>`;
+    }
+
+    // Regression table
+    const regBody = document.getElementById('regressionBody');
+    if (regBody) {
+      regBody.innerHTML = regModels.map(m => `
+        <tr>
+          <td style="color:var(--text-bright);font-weight:600">${m.name || '—'}</td>
+          <td>${m.rmse != null ? m.rmse.toFixed(4) : '—'}</td>
+          <td>${m.r2 != null ? m.r2.toFixed(4) : '—'}</td>
+          <td>${m.mae != null ? m.mae.toFixed(4) : '—'}</td>
+        </tr>
+      `).join('') || `<tr><td colspan="4" style="text-align:center">Không có dữ liệu</td></tr>`;
     }
 
     // Prediction form
@@ -752,15 +804,149 @@
     if (form) {
       form.addEventListener('submit', handlePredict);
     }
+    
+    // Review Score Prediction form
+    const reviewForm = document.getElementById('predictReviewForm');
+    if (reviewForm) {
+      reviewForm.addEventListener('submit', handlePredictReview);
+    }
+
+    // Autofill Feature
+    const inpCustId = document.getElementById('inp_customer_id');
+    if (inpCustId) {
+      inpCustId.addEventListener('input', (e) => {
+        if (e.target.value.trim().length === 32) {
+          handleAutofillReview();
+        }
+      });
+    }
+
+    const inpCustIdChurn = document.getElementById('inp_customer_id_churn');
+    if (inpCustIdChurn) {
+      inpCustIdChurn.addEventListener('input', (e) => {
+        if (e.target.value.trim().length === 32) {
+          handleAutofillChurn();
+        }
+      });
+    }
+  }
+
+  async function handleAutofillChurn() {
+    const custId = document.getElementById('inp_customer_id_churn').value.trim();
+    if (!custId) {
+      alert("Vui lòng nhập Mã Khách Hàng (Customer Unique ID)");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/customers/${custId}`);
+      if (!res.ok) {
+        throw new Error("Không tìm thấy khách hàng này");
+      }
+      const data = await res.json();
+      
+      // Fill the fields
+      document.getElementById('inp_recency').value = Math.round(data.recency);
+      document.getElementById('inp_frequency').value = Math.round(data.frequency);
+      document.getElementById('inp_monetary').value = convertCur(data.monetary).toFixed(0);
+      document.getElementById('inp_review').value = data.review_score.toFixed(1);
+      document.getElementById('inp_delivery').value = Math.round(data.delivery_days);
+      
+    } catch (err) {
+      alert(err.message || "Đã xảy ra lỗi khi tải dữ liệu");
+    }
+  }
+
+  async function handleAutofillReview() {
+    const custId = document.getElementById('inp_customer_id').value.trim();
+    if (!custId) {
+      alert("Vui lòng nhập Mã Khách Hàng (Customer Unique ID)");
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/customers/' + encodeURIComponent(custId) + '/latest_order');
+      const data = await res.json();
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+      
+      document.getElementById('inp_price').value = window.CURRENCY_MODE === 'VND' ? (data.price * VND_RATE).toFixed(0) : data.price.toFixed(2);
+      document.getElementById('inp_freight').value = window.CURRENCY_MODE === 'VND' ? (data.freight_value * VND_RATE).toFixed(0) : data.freight_value.toFixed(2);
+      document.getElementById('inp_delivery_rev').value = data.delivery_days;
+      document.getElementById('inp_item_count').value = data.item_count;
+      document.getElementById('inp_installments').value = data.installments;
+      
+    } catch (e) {
+      console.error(e);
+      alert("Có lỗi xảy ra khi lấy dữ liệu.");
+    }
+  }
+
+  async function handlePredictReview(e) {
+    e.preventDefault();
+    const form = e.target;
+    
+    // Reverse conversion if UI is in VND
+    let priceVal = parseFloat(form.price.value) || 0;
+    let freightVal = parseFloat(form.freight_value.value) || 0;
+    if (window.CURRENCY_MODE === 'VND') {
+      priceVal = priceVal / VND_RATE;
+      freightVal = freightVal / VND_RATE;
+    }
+
+    const body = {
+      price: priceVal,
+      freight_value: freightVal,
+      delivery_days: parseFloat(form.delivery_days.value),
+      item_count: parseFloat(form.item_count.value),
+      installments: parseFloat(form.installments.value)
+    };
+
+    const btn = form.querySelector('button');
+    const oriText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner"></span> Đang xử lý...';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/predict_review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      const resDiv = document.getElementById('predictReviewResult');
+      resDiv.classList.remove('hidden');
+
+      if (data && data.predicted_score) {
+        document.getElementById('resultReviewLabel').textContent = data.predicted_score + ' ★';
+      } else {
+        document.getElementById('resultReviewLabel').textContent = 'Lỗi';
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Có lỗi xảy ra khi dự đoán.');
+    } finally {
+      btn.innerHTML = oriText;
+      btn.disabled = false;
+    }
   }
 
   async function handlePredict(e) {
     e.preventDefault();
     const form = e.target;
+    
+    let monetaryVal = parseFloat(form.monetary.value) || 0;
+    if (window.CURRENCY_MODE === 'VND') {
+      monetaryVal = monetaryVal / VND_RATE;
+    }
+
     const body = {
+      customer_id:   document.getElementById('inp_customer_id_churn').value.trim(),
       recency:       parseFloat(form.recency.value) || 0,
       frequency:     parseFloat(form.frequency.value) || 1,
-      monetary:      parseFloat(form.monetary.value) || 0,
+      monetary:      monetaryVal,
       review_score:  parseFloat(form.review_score.value) || 5,
       delivery_days: parseFloat(form.delivery_days.value) || 10,
     };
@@ -785,17 +971,18 @@
       resultDiv.classList.remove('hidden', 'result-low', 'result-medium', 'result-high');
 
       const prob = data.probability || 0;
+      const pct = prob < 1 ? prob * 100 : prob;
       if (icon) icon.textContent = prob >= 0.5 ? '🚨' : '✅';
       label.textContent = data.label || '—';
-      probEl.textContent = (prob * 100).toFixed(1) + '%';
+      probEl.textContent = pct.toFixed(1) + '%';
       riskEl.textContent = data.risk_level || '—';
 
-      if (prob >= 0.6) resultDiv.classList.add('result-high');
-      else if (prob >= 0.35) resultDiv.classList.add('result-medium');
+      if (prob >= 0.5) resultDiv.classList.add('result-high');
+      else if (prob >= 0.3) resultDiv.classList.add('result-medium');
       else resultDiv.classList.add('result-low');
 
       setTimeout(() => {
-        bar.style.width = (prob * 100) + '%';
+        bar.style.width = pct + '%';
       }, 100);
 
     } catch (err) {

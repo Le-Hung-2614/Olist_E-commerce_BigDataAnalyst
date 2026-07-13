@@ -163,6 +163,36 @@ const ChartTheme = (() => {
   }
 
   /**
+   * Multi-line chart (e.g., trend by segments)
+   */
+  function createMultiLineChart(canvasId, labels, datasets) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return null;
+    const context = ctx.getContext('2d');
+
+    const config = {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: datasets
+      },
+      options: deepMerge({}, DEFAULT_OPTIONS, {
+        interaction: { mode: 'index', intersect: false },
+        elements: {
+          line: { tension: 0.4, borderWidth: 3 },
+          point: { radius: 0, hoverRadius: 6, hitRadius: 10 }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { beginAtZero: true }
+        }
+      })
+    };
+
+    return registerChart(canvasId, new Chart(context, config));
+  }
+
+  /**
    * Bar chart (vertical)
    */
   function createBarChart(canvasId, labels, data, label = 'Value', color = null, tooltipCallback = null) {
@@ -501,7 +531,7 @@ const ChartTheme = (() => {
   // ── Public API ──────────────────────────────────────────────────
   return {
     COLORS, PALETTE, GRADIENTS,
-    createLineChart, createBarChart, createHorizontalBar,
+    createLineChart, createMultiLineChart, createBarChart, createHorizontalBar,
     createDoughnut, createPie, createScatter, createRadar,
     createGroupedBar,
     withAlpha, formatNumber, formatCompact,

@@ -20,7 +20,7 @@ from pymongo import MongoClient
 
 # Set PYSPARK_PYTHON bằng FULL PATH, dùng Python 3.12 (đã xác nhận có đủ
 # pyspark + pandas + pyarrow trên máy này).
-PYTHON_PATH = "/usr/bin/python3"
+PYTHON_PATH = "C:/Users/Admin/AppData/Local/Programs/Python/Python312/python.exe"
 os.environ["PYSPARK_PYTHON"] = PYTHON_PATH
 os.environ["PYSPARK_DRIVER_PYTHON"] = PYTHON_PATH
 os.environ["SPARK_LOCAL_IP"] = "127.0.0.1"
@@ -159,11 +159,6 @@ def _write_records_to_mongodb(records, collection_name, mode="overwrite"):
 def write_to_mongodb(df, collection_name, mode="overwrite"):
     """
     Ghi một Spark DataFrame vào MongoDB collection.
-
-    Cách làm: convert sang pandas an toàn (_spark_df_to_pandas_safe),
-    rồi dùng pymongo để insert trực tiếp - KHÔNG dùng
-    "df.write.format('mongodb')" của Spark nữa, để tránh rủi ro lỗi
-    socket JVM<->Python từng gặp nhiều lần với Spark MLlib.
     """
     pdf = _spark_df_to_pandas_safe(df)
     record_count = len(pdf)

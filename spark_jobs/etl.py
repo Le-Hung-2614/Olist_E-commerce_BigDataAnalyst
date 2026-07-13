@@ -16,11 +16,8 @@ import sys
 import os
 from datetime import datetime
 
-# Set PYSPARK_PYTHON bằng FULL PATH, dùng Python 3.13 (đã xác nhận có đủ
-# pyspark + pandas + pyarrow trên máy này - Python 3.12 trước đó THIẾU cả
-# pandas lẫn pyarrow, là nguyên nhân khiến worker chết giữa chừng khi ghi
-# parquet, để lại thư mục HDFS rỗng 0B dù không báo lỗi rõ ràng).
-PYTHON_PATH = "/usr/bin/python3"
+# Set PYSPARK_PYTHON bằng FULL PATH, dùng Python 3.13.
+PYTHON_PATH = "C:/Users/Admin/AppData/Local/Programs/Python/Python313/python.exe"
 os.environ["PYSPARK_PYTHON"] = PYTHON_PATH
 os.environ["PYSPARK_DRIVER_PYTHON"] = PYTHON_PATH
 os.environ["SPARK_LOCAL_IP"] = "127.0.0.1"
@@ -111,15 +108,6 @@ def create_spark_session():
         .config("spark.executor.heartbeatInterval", "60s")
         # Ép session timezone UTC - tránh lỗi pytz khi convert timestamp.
         .config("spark.sql.session.timeZone", "UTC")
-         # =====================================================================
-        # CẤU HÌNH SỬA LỖI: NGĂN CHẶN CRASH DO ÉP SAI KIỂU DỮ LIỆU (CAST/AVG)
-        # =====================================================================
-        # Tắt chế độ nghiêm ngặt ANSI SQL (Mặc định True ở Spark mới). Khi đặt False, 
-        # lỗi ép kiểu từ ngày tháng sang số thực (DOUBLE) sẽ chuyển thành NULL thay vì crash pipeline.
-        .config("spark.sql.ansi.enabled", "false")
-        # Đảm bảo cơ chế phân tích chuỗi ngày tháng hoạt động bao dung, không văng lỗi legacy
-        .config("spark.sql.legacy.timeParserPolicy", "LEGACY")
-        # =====================================================================
         .getOrCreate()
     )
     spark.sparkContext.setLogLevel("WARN")

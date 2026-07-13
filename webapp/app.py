@@ -12,6 +12,10 @@ import os
 import numpy as np
 import joblib
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -29,11 +33,23 @@ agg_col = db["aggregations"]
 # -- ML Models --
 CHURN_MODEL_DICT = None
 try:
-    model_path = os.path.join("tmp_models", "churn_prediction.joblib")
+    path_root = os.path.join("tmp_models", "churn_prediction.joblib")
+    path_webapp = os.path.join("..", "tmp_models", "churn_prediction.joblib")
+    model_path = path_root if os.path.exists(path_root) else path_webapp
     if os.path.exists(model_path):
         CHURN_MODEL_DICT = joblib.load(model_path)
 except Exception as e:
-    print(f"Error loading churn model: {e}")
+    logger.error(f"Failed to load churn model: {e}")
+
+REVIEW_MODEL = None
+try:
+    path_root = os.path.join("tmp_models", "review_prediction.joblib")
+    path_webapp = os.path.join("..", "tmp_models", "review_prediction.joblib")
+    model_path = path_root if os.path.exists(path_root) else path_webapp
+    if os.path.exists(model_path):
+        REVIEW_MODEL = joblib.load(model_path)
+except Exception as e:
+    logger.error(f"Failed to load review model: {e}")
 
 # -- Helpers --
 def _json(data):
@@ -221,6 +237,49 @@ def api_overview():
 # ====================================================================
 #  API - Monthly Revenue
 # ====================================================================
+
+
+
+# ====================================================================
+#  Run
+# ====================================================================
+@app.route("/api/predict_review", methods=["POST"])
+def predict_review():
+    if REVIEW_MODEL is None:
+        return jsonify({"error": "Review Score model is not loaded (file missing)"}), 500
+
+    try:
+        data = request.json
+        price = float(data.get("price", 100))
+        freight = float(data.get("freight_value", 20))
+        freight_ratio = freight / (price + freight) if (price + freight) > 0 else 0
+
+        # Features expected: ['delivery_days' 'freight_value' 'price' 'item_count' 'freight_ratio' 'estimated_vs_actual' 'installments' 'category' 'payment_type']
+        import pandas as pd
+        df = pd.DataFrame([{
+            "delivery_days": float(data.get("delivery_days", 10)),
+            "freight_value": freight,
+            "price": price,
+            "item_count": int(data.get("item_count", 1)),
+            "freight_ratio": freight_ratio,
+            "estimated_vs_actual": float(data.get("estimated_vs_actual", 2)),
+            "installments": int(data.get("installments", 1)),
+            "category": str(data.get("category", "health_beauty")),
+            "payment_type": str(data.get("payment_type", "credit_card")),
+        }])
+
+        pred = REVIEW_MODEL.predict(df)[0]
+        score = round(max(1.0, min(5.0, float(pred))), 1)
+
+        return jsonify({
+            "status": "success",
+            "predicted_score": score
+        })
+    except Exception as e:
+        logger.error(f"Prediction Error: {e}")
+        return jsonify({"error": str(e)}), 400
+
+
 @app.route("/api/revenue")
 def api_revenue():
     try:
@@ -346,10 +405,25 @@ def api_segments():
         ]
         top_customers = list(customers_col.aggregate(top_pipeline))
 
+        trend_pipeline = [
+            {"$match": {"segment_name": {"$exists": True, "$ne": "Unknown"}}},
+            {"$group": {
+                "_id": {
+                    "month": {"$substr": ["$first_purchase_date", 0, 7]},
+                    "segment": "$segment_name"
+                },
+                "count": {"$sum": 1}
+            }},
+            {"$sort": {"_id.month": 1}}
+        ]
+        trend_agg = list(customers_col.aggregate(trend_pipeline))
+        trend_data = [{"month": r["_id"]["month"], "segment": r["_id"]["segment"], "count": r["count"]} for r in trend_agg]
+
         return jsonify({
             "distribution": _json(distribution),
             "rfm": _json(rfm_data),
             "top_customers": _json(top_customers),
+            "trend_data": trend_data
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -403,52 +477,22 @@ def api_churn():
             "recency": int(float(r.get("recency", 0) or 0)),
         } for r in high_risk]
 
-        model_docs = list(agg_col.find({"agg_type": "model_performance"}))
-        model_comparison = {}
-        if model_docs:
-            flat_models = []
-            for doc in model_docs:
-                metrics_raw = doc.get("metrics_json", "{}")
-                try:
-                    metrics = json.loads(metrics_raw) if isinstance(metrics_raw, str) else metrics_raw
-                except Exception:
-                    metrics = {}
-                if not isinstance(metrics, dict) or not metrics:
-                    continue
-
-                # Extract sub-models from nested 'models' dict
-                sub_models = metrics.get("models", {})
-                best_key = metrics.get("best_model", "")
-
-                if isinstance(sub_models, dict) and sub_models:
-                    for sub_name, sub_m in sub_models.items():
-                        if not isinstance(sub_m, dict):
-                            continue
-                        # Skip regression-only (rmse without auc)
-                        if "rmse" in sub_m and "auc_roc" not in sub_m:
-                            continue
-                        flat_models.append({
-                            "name": sub_name + (" *" if sub_name == best_key else ""),
-                            "accuracy": sub_m.get("accuracy", 0),
-                            "precision": sub_m.get("precision", 0),
-                            "recall": sub_m.get("recall", 0),
-                            "f1": sub_m.get("f1_score", 0),
-                            "auc": sub_m.get("auc_roc", 0),
-                        })
-                elif metrics.get("accuracy") or metrics.get("auc_roc"):
-                    # Flat model format (direct metrics at top level)
-                    model_name = doc.get("model_name") or metrics.get("model_name", "Model")
-                    flat_models.append({
-                        "name": model_name,
-                        "accuracy": metrics.get("accuracy", 0),
-                        "precision": metrics.get("precision", 0),
-                        "recall": metrics.get("recall", 0),
-                        "f1": metrics.get("f1_score", 0),
-                        "auc": metrics.get("auc_roc", 0),
-                    })
-
-            if flat_models:
-                model_comparison = {"models": flat_models}
+        # Add new aggregation: churn by state (Top 5 states with highest churned customers)
+        state_pipeline = [
+            {"$group": {
+                "_id": "$customer_state",
+                "total": {"$sum": 1},
+                "churned": {"$sum": {"$cond": [{"$in": ["$churn_prediction", [1, 1.0]]}, 1, 0]}}
+            }},
+            {"$sort": {"churned": -1}},
+            {"$limit": 5}
+        ]
+        by_state_agg = list(customers_col.aggregate(state_pipeline))
+        by_state = [{
+            "state": r["_id"] or "Unknown",
+            "total": r["total"],
+            "churned": r["churned"]
+        } for r in by_state_agg]
 
         return jsonify({
             "churn_rate": churn_rate,
@@ -456,7 +500,7 @@ def api_churn():
             "churned": churned,
             "by_segment": _json(segment_data),
             "high_risk": high_risk_clean,
-            "model_comparison": model_comparison,
+            "by_state": by_state
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -595,9 +639,9 @@ def api_models():
             for sub_name, sub_m in sub_models.items():
                 if not isinstance(sub_m, dict):
                     continue
-                if "rmse" in sub_m and "auc_roc" not in sub_m:
-                    continue
+                is_regression = "rmse" in sub_m and "auc_roc" not in sub_m
                 models_list.append({
+                    "is_regression": is_regression,
                     "name": sub_name + (" *" if sub_name == best_key else ""),
                     "accuracy": sub_m.get("accuracy", sub_m.get("r2", 0)),
                     "precision": sub_m.get("precision"),
@@ -605,6 +649,8 @@ def api_models():
                     "f1": sub_m.get("f1_score"),
                     "auc": sub_m.get("auc_roc"),
                     "rmse": sub_m.get("rmse"),
+                    "r2": sub_m.get("r2"),
+                    "mae": sub_m.get("mae"),
                     "confusion_matrix": cm,
                     "feature_importance": build_feature_importance(metrics),
                 })
@@ -630,42 +676,88 @@ def api_models():
 # ====================================================================
 @app.route("/api/predict", methods=["POST"])
 def api_predict():
+    """
+    Composite Churn Prediction using 5 weighted factors:
+      30% recency, 20% delivery_days, 20% review_score, 15% frequency, 15% monetary
+    If customer_id is provided → compute composite score from DB values.
+    Otherwise → use the trained GradientBoosting model on manual input.
+    """
     try:
         data = request.get_json(force=True)
-        recency = float(data.get("recency", 0))
+        customer_id = data.get("customer_id", "").strip()
+
+        # Helper: compute composite risk from raw values
+        # Uses dataset-level min/max for normalization
+        STATS = {
+            'recency':          {'min': 0,   'max': 730},
+            'frequency':        {'min': 1,   'max': 20},
+            'monetary':         {'min': 0,   'max': 14000},
+            'avg_review_score': {'min': 1.0, 'max': 5.0},
+            'avg_delivery_days':{'min': 0,   'max': 200},
+        }
+
+        def _norm(val, key):
+            mn, mx = STATS[key]['min'], STATS[key]['max']
+            return max(0.0, min(1.0, (val - mn) / (mx - mn))) if mx > mn else 0.0
+
+        def _composite(rec, freq, mon, rev, deli):
+            return (
+                0.30 * _norm(rec, 'recency') +
+                0.15 * (1 - _norm(freq, 'frequency')) +
+                0.15 * (1 - _norm(mon, 'monetary')) +
+                0.20 * (1 - _norm(rev, 'avg_review_score')) +
+                0.20 * _norm(deli, 'avg_delivery_days')
+            )
+
+        def _risk_label(prob):
+            if prob >= 0.7: return "Rất Cao"
+            if prob >= 0.5: return "Cao"
+            if prob >= 0.3: return "Trung Bình"
+            return "Thấp"
+
+        # ── Path 1: Customer ID provided → composite from DB ──
+        if customer_id:
+            cust = customers_col.find_one({"customer_unique_id": customer_id})
+            if cust:
+                rec   = float(cust.get("recency", 0))
+                freq  = float(cust.get("frequency", 1))
+                mon   = float(cust.get("monetary", 0))
+                rev   = float(cust.get("avg_review_score", 3))
+                deli  = float(cust.get("avg_delivery_days", 10))
+
+                prob = _composite(rec, freq, mon, rev, deli)
+                prob = max(0.01, min(0.99, prob))
+
+                return jsonify({
+                    "probability": round(prob, 3),
+                    "label": "Nguy cơ rời bỏ cao" if prob >= 0.5 else "Khả năng gắn bó",
+                    "risk_level": _risk_label(prob),
+                })
+
+        # ── Path 2: Manual input → use trained model ──
+        recency   = float(data.get("recency", 30))
         frequency = float(data.get("frequency", 1))
-        monetary = float(data.get("monetary", 0))
-        review = float(data.get("review_score", 4))
-        delivery = float(data.get("delivery_days", 10))
+        monetary  = float(data.get("monetary", 0))
+        review    = float(data.get("review_score", 4))
+        delivery  = float(data.get("delivery_days", 10))
 
         if CHURN_MODEL_DICT is not None:
             scaler = CHURN_MODEL_DICT['scaler']
-            model = CHURN_MODEL_DICT['model']
-            
-            # Create feature array matching the 5 features
-            X_input = np.array([[recency, frequency, monetary, review, delivery]])
+            model  = CHURN_MODEL_DICT['model']
+
+            # 5 features: recency, frequency, monetary, avg_review_score, avg_delivery_days
+            X_input  = np.array([[recency, frequency, monetary, review, delivery]])
             X_scaled = scaler.transform(X_input)
-            
-            # Predict probability of class 1
-            prob = float(model.predict_proba(X_scaled)[0][1])
+            prob     = float(model.predict_proba(X_scaled)[0][1])
         else:
-            # Fallback ML heuristic if model fails to load
-            base_prob = 0.4
-            base_prob += (recency - 100) * 0.0015
-            base_prob -= (frequency - 1) * 0.05
-            base_prob -= (review - 3) * 0.05
-            base_prob += (delivery - 10) * 0.01
-            prob = max(0.01, min(0.99, base_prob))
+            # Fallback: direct composite calculation
+            prob = _composite(recency, frequency, monetary, review, delivery)
+            prob = max(0.01, min(0.99, prob))
 
         return jsonify({
             "probability": round(prob, 3),
             "label": "Nguy cơ rời bỏ cao" if prob >= 0.5 else "Khả năng gắn bó",
-            "risk_level": (
-                "Rất Cao" if prob >= 0.8 else
-                "Cao" if prob >= 0.6 else
-                "Trung Bình" if prob >= 0.4 else
-                "Thấp" if prob >= 0.2 else "Rất Thấp"
-            ),
+            "risk_level": _risk_label(prob),
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -848,6 +940,48 @@ def api_customers_churn():
             "total_records": total_docs
         })
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/customers/<customer_unique_id>")
+def api_customer_by_id(customer_unique_id):
+    try:
+        customer = customers_col.find_one(
+            {"customer_unique_id": customer_unique_id}
+        )
+        if not customer:
+            return jsonify({"error": "Không tìm thấy khách hàng này"}), 404
+            
+        data = {
+            "recency": customer.get("recency", 30),
+            "frequency": customer.get("frequency", 3),
+            "monetary": customer.get("monetary", 250),
+            "review_score": customer.get("avg_review_score", 4),
+            "delivery_days": customer.get("avg_delivery_days", 10)
+        }
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/customers/<customer_unique_id>/latest_order")
+def api_customer_latest_order(customer_unique_id):
+    try:
+        order = orders_col.find_one(
+            {"customer.customer_unique_id": customer_unique_id},
+            sort=[("order_purchase_timestamp", -1)]
+        )
+        if not order:
+            return jsonify({"error": "Không tìm thấy đơn hàng nào cho khách hàng này"}), 404
+            
+        data = {
+            "price": order.get("items", {}).get("total_price", 100),
+            "freight_value": order.get("items", {}).get("total_freight_value", 20),
+            "delivery_days": order.get("delivery_days", 10),
+            "item_count": order.get("items", {}).get("total_items", 1),
+            "installments": order.get("payment", {}).get("installments", 1)
+        }
+        return jsonify(data)
+    except Exception as e:
+        logger.error(f"Error latest_order: {e}")
         return jsonify({"error": str(e)}), 500
 
 

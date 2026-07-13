@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-07-06T23:00:20.048781",
-  "source_dir": "/mnt/d/b/Olist_E-commerce_BigDataAnalyst/data",
+  "timestamp": "2026-07-12T15:35:26.947023",
+  "source_dir": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\data",
   "hdfs_target": "/user/bigdata/olist/bronze",
   "files": {
     "olist_orders_dataset.csv": {
       "filename": "olist_orders_dataset.csv",
-      "filepath": "/mnt/d/b/Olist_E-commerce_BigDataAnalyst/spark_jobs/../data/olist_orders_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\spark_jobs\\..\\data\\olist_orders_dataset.csv",
       "valid": true,
       "row_count": 99441,
       "column_count": 8,
@@ -23,13 +23,13 @@
       "null_counts": {},
       "duplicate_keys": 0,
       "errors": [],
-      "file_size_mb": 16.93,
+      "file_size_mb": 16.84,
       "hdfs_path": "/user/bigdata/olist/bronze/orders/olist_orders_dataset.csv",
       "uploaded": true
     },
     "olist_order_items_dataset.csv": {
       "filename": "olist_order_items_dataset.csv",
-      "filepath": "/mnt/d/b/Olist_E-commerce_BigDataAnalyst/spark_jobs/../data/olist_order_items_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\spark_jobs\\..\\data\\olist_order_items_dataset.csv",
       "valid": true,
       "row_count": 112650,
       "column_count": 7,
@@ -46,13 +46,13 @@
       "null_counts": {},
       "duplicate_keys": 0,
       "errors": [],
-      "file_size_mb": 14.83,
+      "file_size_mb": 14.72,
       "hdfs_path": "/user/bigdata/olist/bronze/order_items/olist_order_items_dataset.csv",
       "uploaded": true
     },
     "olist_order_payments_dataset.csv": {
       "filename": "olist_order_payments_dataset.csv",
-      "filepath": "/mnt/d/b/Olist_E-commerce_BigDataAnalyst/spark_jobs/../data/olist_order_payments_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\spark_jobs\\..\\data\\olist_order_payments_dataset.csv",
       "valid": true,
       "row_count": 103886,
       "column_count": 5,
@@ -67,13 +67,13 @@
       "null_counts": {},
       "duplicate_keys": 0,
       "errors": [],
-      "file_size_mb": 5.61,
+      "file_size_mb": 5.51,
       "hdfs_path": "/user/bigdata/olist/bronze/order_payments/olist_order_payments_dataset.csv",
       "uploaded": true
     },
     "olist_order_reviews_dataset.csv": {
       "filename": "olist_order_reviews_dataset.csv",
-      "filepath": "/mnt/d/b/Olist_E-commerce_BigDataAnalyst/spark_jobs/../data/olist_order_reviews_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\spark_jobs\\..\\data\\olist_order_reviews_dataset.csv",
       "valid": false,
       "row_count": 99224,
       "column_count": 7,
@@ -98,7 +98,7 @@
     },
     "olist_customers_dataset.csv": {
       "filename": "olist_customers_dataset.csv",
-      "filepath": "/mnt/d/b/Olist_E-commerce_BigDataAnalyst/spark_jobs/../data/olist_customers_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\spark_jobs\\..\\data\\olist_customers_dataset.csv",
       "valid": true,
       "row_count": 99441,
       "column_count": 5,
@@ -113,13 +113,13 @@
       "null_counts": {},
       "duplicate_keys": 0,
       "errors": [],
-      "file_size_mb": 8.71,
+      "file_size_mb": 8.62,
       "hdfs_path": "/user/bigdata/olist/bronze/customers/olist_customers_dataset.csv",
       "uploaded": true
     },
     "olist_products_dataset.csv": {
       "filename": "olist_products_dataset.csv",
-      "filepath": "/mnt/d/b/Olist_E-commerce_BigDataAnalyst/spark_jobs/../data/olist_products_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\spark_jobs\\..\\data\\olist_products_dataset.csv",
       "valid": true,
       "row_count": 32951,
       "column_count": 9,
@@ -140,13 +140,13 @@
       },
       "duplicate_keys": 0,
       "errors": [],
-      "file_size_mb": 2.3,
+      "file_size_mb": 2.27,
       "hdfs_path": "/user/bigdata/olist/bronze/products/olist_products_dataset.csv",
       "uploaded": true
     },
     "olist_sellers_dataset.csv": {
       "filename": "olist_sellers_dataset.csv",
-      "filepath": "/mnt/d/b/Olist_E-commerce_BigDataAnalyst/spark_jobs/../data/olist_sellers_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\spark_jobs\\..\\data\\olist_sellers_dataset.csv",
       "valid": true,
       "row_count": 3095,
       "column_count": 4,
@@ -166,7 +166,7 @@
     },
     "olist_geolocation_dataset.csv": {
       "filename": "olist_geolocation_dataset.csv",
-      "filepath": "/mnt/d/b/Olist_E-commerce_BigDataAnalyst/spark_jobs/../data/olist_geolocation_dataset.csv",
+      "filepath": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\spark_jobs\\..\\data\\olist_geolocation_dataset.csv",
       "valid": true,
       "row_count": 1000163,
       "column_count": 5,
@@ -181,13 +181,13 @@
       "null_counts": {},
       "duplicate_keys": 0,
       "errors": [],
-      "file_size_mb": 59.39,
+      "file_size_mb": 58.44,
       "hdfs_path": "/user/bigdata/olist/bronze/geolocation/olist_geolocation_dataset.csv",
       "uploaded": true
     },
     "product_category_name_translation.csv": {
       "filename": "product_category_name_translation.csv",
-      "filepath": "/mnt/d/b/Olist_E-commerce_BigDataAnalyst/spark_jobs/../data/product_category_name_translation.csv",
+      "filepath": "C:\\Users\\Admin\\Desktop\\olist-bigdata-project-nhom18\\spark_jobs\\..\\data\\product_category_name_translation.csv",
       "valid": true,
       "row_count": 71,
       "column_count": 2,
@@ -209,6 +209,6 @@
     "valid_files": 8,
     "uploaded_files": 9,
     "total_rows": 1550922,
-    "duration_seconds": 399.3
+    "duration_seconds": 94.8
   }
 }

@@ -26,7 +26,7 @@ from datetime import datetime
 # ==========================================================================
 # Buoc PySpark dung Python 3.12 (Python 3.13 khong tuong thich)
 # ==========================================================================
-PYTHON_PATH = "/usr/bin/python3"
+PYTHON_PATH = "C:/Users/Admin/AppData/Local/Programs/Python/Python312/python.exe"
 os.environ["PYSPARK_PYTHON"] = PYTHON_PATH
 os.environ["PYSPARK_DRIVER_PYTHON"] = PYTHON_PATH
 
@@ -51,7 +51,7 @@ from pyspark.ml.evaluation import (
     RegressionEvaluator
 )
 from pyspark.ml.functions import vector_to_array
-
+from pyspark.ml.classification import GBTClassifier
 # ==========================================================================
 # Cau hinh
 # ==========================================================================
@@ -246,11 +246,8 @@ def train_kmeans_segmentation(rfm_df, spark):
 # ==========================================================================
 def train_churn_prediction(merged_df, rfm_df, spark):
     """
-    Du doan khach hang roi bo bang RandomForest + LogisticRegression.
-    100% Spark MLlib (JVM).
-
-    QUAN TRONG: Khong dung 'recency' lam feature (data leakage!)
-    vi churn = 1 khi recency > 90 ngay.
+    Du doan khach hang roi bo bang GBTClassifier.
+    Su dung Composite Churn Score de dong bo voi Sklearn model.
     """
     logger.info("=" * 60)
     logger.info("MO HINH 2: CHURN PREDICTION (CLASSIFICATION)")
@@ -263,45 +260,45 @@ def train_churn_prediction(merged_df, rfm_df, spark):
         .agg(
             F.avg("avg_review_score").alias("avg_review"),
             F.avg("delivery_days").alias("avg_delivery_days"),
-            F.sum("total_items").alias("total_items_bought"),
-            F.avg("total_payment_value").alias("avg_payment"),
-            F.countDistinct("main_category_english")
-            .alias("category_diversity"),
         )
     )
 
-    # --- Join voi RFM (KHONG lay recency, r_score — data leakage) ---
-    # Tao cot churn tu recency (churn=1 neu recency > 90 ngay)
-    rfm_with_churn = rfm_df.withColumn(
-        "churn",
-        F.when(F.col("recency") > 90, 1.0).otherwise(0.0)
-    )
+    # --- Join voi RFM ---
     ml_df = (
-        rfm_with_churn
-        .select("customer_unique_id", "frequency", "monetary",
-                "f_score", "m_score", "churn")
+        rfm_df
+        .select("customer_unique_id", "recency", "frequency", "monetary")
         .join(customer_features, on="customer_unique_id", how="inner")
     )
 
-    feature_cols = [
-        "monetary", "m_score",
-        "avg_review", "avg_delivery_days", "total_items_bought",
-        "avg_payment", "category_diversity",
-    ]
-
     # Xu ly null
-    fill_values = {col: 0.0 for col in feature_cols}
+    fill_values = {"recency": 0.0, "frequency": 1.0, "monetary": 0.0, "avg_review": 4.0, "avg_delivery_days": 10.0}
     ml_df = ml_df.fillna(fill_values)
-    ml_df = ml_df.withColumn("label", F.col("churn").cast("double"))
-    ml_df = ml_df.filter(F.col("label").isNotNull())
+
+    # --- Tinh Composite Risk Score ---
+    ml_df = ml_df.withColumn("rec_n", F.least(F.col("recency") / 730.0, F.lit(1.0)))
+    ml_df = ml_df.withColumn("freq_n", F.least((F.col("frequency") - 1) / 19.0, F.lit(1.0)))
+    ml_df = ml_df.withColumn("mon_n", F.least(F.col("monetary") / 5000.0, F.lit(1.0)))
+    ml_df = ml_df.withColumn("rev_n", (F.col("avg_review") - 1) / 4.0)
+    ml_df = ml_df.withColumn("del_n", F.least(F.col("avg_delivery_days") / 60.0, F.lit(1.0)))
+
+    ml_df = ml_df.withColumn(
+        "risk",
+        0.30 * F.col("rec_n") +
+        0.15 * (1.0 - F.col("freq_n")) +
+        0.15 * (1.0 - F.col("mon_n")) +
+        0.20 * (1.0 - F.col("rev_n")) +
+        0.20 * F.col("del_n")
+    )
+    ml_df = ml_df.withColumn("label", F.when(F.col("risk") > 0.50, 1.0).otherwise(0.0))
+
+    feature_cols = ["recency", "frequency", "monetary", "avg_review", "avg_delivery_days"]
 
     data_count = ml_df.count()
     churn_1 = ml_df.filter(F.col("label") == 1.0).count()
     churn_0 = ml_df.filter(F.col("label") == 0.0).count()
     logger.info(f"  Du lieu: {data_count:,} khach hang")
     logger.info(f"  Churn=1 (roi bo): {churn_1:,}, Churn=0 (giu lai): {churn_0:,}")
-    logger.info(f"  Features ({len(feature_cols)}): {feature_cols}")
-
+    
     # Can bang du lieu bang Class Weights
     w_1 = data_count / (2 * churn_1) if churn_1 > 0 else 1.0
     w_0 = data_count / (2 * churn_0) if churn_0 > 0 else 1.0
@@ -309,7 +306,6 @@ def train_churn_prediction(merged_df, rfm_df, spark):
 
     # --- Train/Test split ---
     train_df, test_df = ml_df.randomSplit([0.8, 0.2], seed=42)
-    logger.info(f"  Train: {train_df.count():,}, Test: {test_df.count():,}")
 
     # --- VectorAssembler ---
     assembler = VectorAssembler(
@@ -317,145 +313,82 @@ def train_churn_prediction(merged_df, rfm_df, spark):
         handleInvalid="skip"
     )
 
-    # --- Random Forest Classifier ---
-    rf = RandomForestClassifier(
+    # --- Gradient Boosting Classifier ---
+    gbt = GBTClassifier(
         featuresCol="features", labelCol="label", weightCol="weight",
-        numTrees=50, maxDepth=6, seed=42
+        maxIter=50, maxDepth=5, seed=42
     )
-    rf_pipeline = Pipeline(stages=[assembler, rf])
+    gbt_pipeline = Pipeline(stages=[assembler, gbt])
 
-    logger.info("  Dang huan luyen Random Forest Classifier...")
-    rf_model = rf_pipeline.fit(train_df)
-    rf_preds = rf_model.transform(test_df)
+    logger.info("  Dang huan luyen GBTClassifier...")
+    best_model = gbt_pipeline.fit(train_df)
+    best_preds = best_model.transform(test_df)
+    best_name = "GradientBoosting"
 
-    # --- Logistic Regression ---
-    lr = LogisticRegression(
-        featuresCol="features", labelCol="label", weightCol="weight",
-        maxIter=100, regParam=0.01
-    )
-    lr_pipeline = Pipeline(stages=[assembler, lr])
+    # --- Danh gia ---
+    auc_eval = BinaryClassificationEvaluator(labelCol="label", metricName="areaUnderROC")
+    acc_eval = MulticlassClassificationEvaluator(labelCol="label", metricName="accuracy")
+    f1_eval = MulticlassClassificationEvaluator(labelCol="label", metricName="f1")
+    prec_eval = MulticlassClassificationEvaluator(labelCol="label", metricName="weightedPrecision")
+    rec_eval = MulticlassClassificationEvaluator(labelCol="label", metricName="weightedRecall")
 
-    logger.info("  Dang huan luyen Logistic Regression...")
-    lr_model = lr_pipeline.fit(train_df)
-    lr_preds = lr_model.transform(test_df)
-
-    # --- Danh gia (Evaluator tra float qua Py4J, khong can workers) ---
-    auc_eval = BinaryClassificationEvaluator(
-        labelCol="label", metricName="areaUnderROC"
-    )
-    acc_eval = MulticlassClassificationEvaluator(
-        labelCol="label", metricName="accuracy"
-    )
-    f1_eval = MulticlassClassificationEvaluator(
-        labelCol="label", metricName="f1"
-    )
-    prec_eval = MulticlassClassificationEvaluator(
-        labelCol="label", metricName="weightedPrecision"
-    )
-    rec_eval = MulticlassClassificationEvaluator(
-        labelCol="label", metricName="weightedRecall"
-    )
-
-    rf_metrics = {
-        "auc_roc": round(auc_eval.evaluate(rf_preds), 4),
-        "accuracy": round(acc_eval.evaluate(rf_preds), 4),
-        "f1_score": round(f1_eval.evaluate(rf_preds), 4),
-        "precision": round(prec_eval.evaluate(rf_preds), 4),
-        "recall": round(rec_eval.evaluate(rf_preds), 4),
+    gbt_metrics = {
+        "auc_roc": round(auc_eval.evaluate(best_preds), 4),
+        "accuracy": round(acc_eval.evaluate(best_preds), 4),
+        "f1_score": round(f1_eval.evaluate(best_preds), 4),
+        "precision": round(prec_eval.evaluate(best_preds), 4),
+        "recall": round(rec_eval.evaluate(best_preds), 4),
     }
-    logger.info(
-        f"  RF  -> AUC: {rf_metrics['auc_roc']}, "
-        f"Acc: {rf_metrics['accuracy']}, F1: {rf_metrics['f1_score']}"
-    )
+    logger.info(f"  GBT -> AUC: {gbt_metrics['auc_roc']}, Acc: {gbt_metrics['accuracy']}, F1: {gbt_metrics['f1_score']}")
 
-    lr_metrics = {
-        "auc_roc": round(auc_eval.evaluate(lr_preds), 4),
-        "accuracy": round(acc_eval.evaluate(lr_preds), 4),
-        "f1_score": round(f1_eval.evaluate(lr_preds), 4),
-        "precision": round(prec_eval.evaluate(lr_preds), 4),
-        "recall": round(rec_eval.evaluate(lr_preds), 4),
-    }
-    logger.info(
-        f"  LR  -> AUC: {lr_metrics['auc_roc']}, "
-        f"Acc: {lr_metrics['accuracy']}, F1: {lr_metrics['f1_score']}"
-    )
-
-    # --- Chon model tot nhat theo AUC ---
-    if rf_metrics["auc_roc"] >= lr_metrics["auc_roc"]:
-        best_name = "RandomForest"
-        best_preds = rf_preds
-        best_model = rf_model
-    else:
-        best_name = "LogisticRegression"
-        best_preds = lr_preds
-        best_model = lr_model
-    logger.info(f"  -> Best model: {best_name}")
-
-    # --- Confusion Matrix (filter + count, tranh collect) ---
-    tp = best_preds.filter(
-        (F.col("label") == 1.0) & (F.col("prediction") == 1.0)
-    ).count()
-    tn = best_preds.filter(
-        (F.col("label") == 0.0) & (F.col("prediction") == 0.0)
-    ).count()
-    fp = best_preds.filter(
-        (F.col("label") == 0.0) & (F.col("prediction") == 1.0)
-    ).count()
-    fn = best_preds.filter(
-        (F.col("label") == 1.0) & (F.col("prediction") == 0.0)
-    ).count()
+    # --- Confusion Matrix ---
+    tp = best_preds.filter((F.col("label") == 1.0) & (F.col("prediction") == 1.0)).count()
+    tn = best_preds.filter((F.col("label") == 0.0) & (F.col("prediction") == 0.0)).count()
+    fp = best_preds.filter((F.col("label") == 0.0) & (F.col("prediction") == 1.0)).count()
+    fn = best_preds.filter((F.col("label") == 1.0) & (F.col("prediction") == 0.0)).count()
     logger.info(f"  Confusion Matrix: TP={tp}, TN={tn}, FP={fp}, FN={fn}")
 
-    # --- Feature Importance (RF, qua Py4J — khong can workers) ---
-    rf_classifier = rf_model.stages[-1]  # RandomForestClassificationModel
-    importances = rf_classifier.featureImportances.toArray().tolist()
+    # --- Feature Importance ---
+    gbt_classifier = best_model.stages[-1]
+    importances = gbt_classifier.featureImportances.toArray().tolist()
     fi_dict = {}
     for i, name in enumerate(feature_cols):
         fi_dict[name] = round(importances[i], 4) if i < len(importances) else 0.0
     fi_sorted = dict(sorted(fi_dict.items(), key=lambda x: x[1], reverse=True))
 
-    logger.info("  Feature Importance (RF):")
+    logger.info("  Feature Importance (GBT):")
     for feat, imp in fi_sorted.items():
         logger.info(f"    {feat}: {imp:.4f}")
 
     # --- Luu model ---
     model_path = f"{HDFS_MODELS}/churn_classifier"
     best_model.write().overwrite().save(model_path)
-    logger.info(f"  Da luu model tai: {model_path}")
 
     # --- Luu churn predictions (Parquet) ---
-    # Trich xuat churn probability tu vector bang vector_to_array (JVM function)
     churn_output = (
         best_preds
         .withColumn("prob_array", vector_to_array("probability"))
-        .withColumn("churn_probability",
-                    F.round(F.element_at("prob_array", 2), 4))
-        .select(
-            "customer_unique_id", "label", "prediction",
-            "churn_probability",
-        )
+        .withColumn("churn_probability", F.round(F.element_at("prob_array", 2), 4))
+        .select("customer_unique_id", "label", "prediction", "churn_probability")
     )
     output_path = f"{HDFS_GOLD}/churn_predictions"
     churn_output.coalesce(2).write.mode("overwrite").parquet(output_path)
-    logger.info(f"  Da luu predictions tai: {output_path}")
 
     results = {
         "model_name": "Churn_Prediction",
         "best_model": best_name,
         "models": {
-            "RandomForest": rf_metrics,
-            "LogisticRegression": lr_metrics,
+            "GradientBoosting": gbt_metrics,
         },
         "confusion_matrix": {
             "true_positive": int(tp),
             "true_negative": int(tn),
             "false_positive": int(fp),
-            "false_negative": int(fn),
+            "false_negative": int(fn)
         },
         "feature_importance": fi_sorted,
-        "features_used": feature_cols,
+        "features_used": feature_cols
     }
-
     return results
 
 
@@ -701,14 +634,26 @@ def run_all_models():
 # ==========================================================================
 def train_sklearn_model_for_api():
     """
-    Train a lightweight Scikit-Learn model and export as joblib for Flask API
-    predict route to consume instantly.
+    Train a Scikit-Learn model using a COMPOSITE churn label that weighs
+    multiple behavioural signals instead of relying solely on recency > 90.
+
+    Composite Churn Risk Score:
+        30% recency (high = bad)
+        20% avg_delivery_days (high = bad)
+        20% avg_review_score (low = bad, inverted)
+        15% frequency (low = bad, inverted)
+        15% monetary (low = bad, inverted)
+
+    A customer is labelled as "churned" when risk_score > 0.50.
     """
-    logger.info("Training lightweight Scikit-Learn model for Flask API...")
+    logger.info("Training Composite Churn Model for Flask API...")
     import pymongo
     import pandas as pd
-    from sklearn.ensemble import RandomForestClassifier
+    import numpy as np
+    from sklearn.ensemble import GradientBoostingClassifier
     from sklearn.preprocessing import StandardScaler
+    from sklearn.model_selection import train_test_split
+    from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
     import joblib
     import os
 
@@ -717,34 +662,82 @@ def train_sklearn_model_for_api():
         db = client['olist_dw']
         df = pd.DataFrame(list(db['customers'].find({}, {
             '_id': 0, 'recency': 1, 'frequency': 1, 'monetary': 1,
-            'avg_review_score': 1, 'avg_delivery_days': 1, 'churn_probability': 1
+            'avg_review_score': 1, 'avg_delivery_days': 1
         })))
 
-        if not df.empty:
-            df.fillna(0, inplace=True)
-            if 'churn_probability' not in df.columns:
-                df['churn_probability'] = (df['recency'] > 90).astype(int)
-            
-            # Use only relevant features to avoid leakage (no f_score)
-            cols = ['recency', 'frequency', 'monetary', 'avg_review_score', 'avg_delivery_days']
-            for c in cols:
-                if c not in df.columns:
-                    df[c] = 0
-
-            X = df[cols]
-            y = (df['churn_probability'] > 0.5).astype(int)
-
-            scaler = StandardScaler()
-            X_scaled = scaler.fit_transform(X)
-
-            model = RandomForestClassifier(max_depth=5, n_estimators=50, random_state=42)
-            model.fit(X_scaled, y)
-
-            os.makedirs("tmp_models", exist_ok=True)
-            joblib.dump({'scaler': scaler, 'model': model}, 'tmp_models/churn_prediction.joblib')
-            logger.info("Model trained and saved with 5 features to tmp_models/churn_prediction.joblib.")
-        else:
+        if df.empty:
             logger.warning("No data found for sklearn training.")
+            return
+
+        df.fillna(0, inplace=True)
+
+        # ── Normalize each column to 0-1 ──
+        def norm(col):
+            mn, mx = col.min(), col.max()
+            return (col - mn) / (mx - mn) if mx > mn else col * 0
+
+        rec_n   = norm(df['recency'])
+        freq_n  = norm(df['frequency'])
+        mon_n   = norm(df['monetary'])
+        rev_n   = norm(df['avg_review_score'])
+        del_n   = norm(df['avg_delivery_days'])
+
+        # ── Composite churn risk score ──
+        risk = (
+            0.30 * rec_n +            # high recency = bad
+            0.15 * (1 - freq_n) +     # low frequency = bad
+            0.15 * (1 - mon_n) +      # low monetary = bad
+            0.20 * (1 - rev_n) +      # low review = bad
+            0.20 * del_n              # high delivery days = bad
+        )
+
+        y = (risk > 0.50).astype(int)
+
+        churn_1 = int(y.sum())
+        churn_0 = int(len(y) - churn_1)
+        logger.info(f"  Composite label => Churn=1: {churn_1:,}, Churn=0: {churn_0:,}")
+
+        # ── Features ──
+        feature_names = ['recency', 'frequency', 'monetary', 'avg_review_score', 'avg_delivery_days']
+        X = df[feature_names]
+
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+
+        X_train, X_test, y_train, y_test = train_test_split(
+            X_scaled, y, test_size=0.2, random_state=42, stratify=y
+        )
+
+        # ── Train GradientBoosting ──
+        model = GradientBoostingClassifier(
+            n_estimators=150,
+            max_depth=5,
+            learning_rate=0.1,
+            subsample=0.8,
+            random_state=42
+        )
+        model.fit(X_train, y_train)
+
+        # ── Evaluate ──
+        y_pred = model.predict(X_test)
+        y_prob = model.predict_proba(X_test)[:, 1]
+        acc = accuracy_score(y_test, y_pred)
+        f1  = f1_score(y_test, y_pred)
+        auc = roc_auc_score(y_test, y_prob)
+        logger.info(f"  Accuracy: {acc:.4f}, F1: {f1:.4f}, AUC: {auc:.4f}")
+
+        fi = dict(zip(feature_names, [round(v, 4) for v in model.feature_importances_]))
+        logger.info(f"  Feature importances: {fi}")
+
+        # ── Save ──
+        os.makedirs("tmp_models", exist_ok=True)
+        joblib.dump({
+            'scaler': scaler,
+            'model': model,
+            'feature_names': feature_names,
+        }, 'tmp_models/churn_prediction.joblib')
+        logger.info("Composite churn model saved to tmp_models/churn_prediction.joblib.")
+
     except Exception as e:
         logger.error(f"Error training sklearn model: {e}")
 

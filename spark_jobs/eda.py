@@ -20,7 +20,7 @@ import pandas as pd
 from datetime import datetime
 
 
-PYTHON_PATH = "/usr/bin/python3"
+PYTHON_PATH = "C:/Users/Admin/AppData/Local/Programs/Python/Python312/python.exe"
 os.environ["PYSPARK_PYTHON"] = PYTHON_PATH
 os.environ["PYSPARK_DRIVER_PYTHON"] = PYTHON_PATH
 os.environ["SPARK_LOCAL_IP"] = "127.0.0.1"
@@ -47,7 +47,7 @@ HDFS_SILVER = "hdfs://localhost:9000/user/bigdata/olist/silver"
 HDFS_GOLD = "hdfs://localhost:9000/user/bigdata/olist/gold"
 HDFS_EDA_PATH = "hdfs://localhost:9000/user/bigdata/olist/eda_results"
 HDFS_EDA_PATH_CLI = "/user/bigdata/olist/eda_results"
-HDFS_CLI_CMD = ["hadoop", "fs"]
+HDFS_CLI_CMD = ["C:/hadoop/bin/hadoop.cmd", "dfs"]
 LOCAL_EDA_DIR = "tmp_eda"
 
 
