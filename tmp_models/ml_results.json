@@ -21,25 +21,25 @@
     "best_model": "GradientBoosting",
     "models": {
       "GradientBoosting": {
-        "auc_roc": 0.9994,
-        "accuracy": 0.9847,
-        "f1_score": 0.9848,
-        "precision": 0.9843,
-        "recall": 0.984
+        "auc_roc": 0.9995,
+        "accuracy": 0.9853,
+        "f1_score": 0.9853,
+        "precision": 0.9855,
+        "recall": 0.9853
       }
     },
     "confusion_matrix": {
-      "true_positive": 6789,
-      "true_negative": 11510,
-      "false_positive": 218,
-      "false_negative": 67
+      "true_positive": 6796,
+      "true_negative": 11514,
+      "false_positive": 214,
+      "false_negative": 59
     },
     "feature_importance": {
-      "recency": 0.4443,
-      "avg_review": 0.376,
-      "avg_delivery_days": 0.1648,
-      "monetary": 0.0147,
-      "frequency": 0.0003
+      "recency": 0.4603,
+      "avg_review": 0.3829,
+      "avg_delivery_days": 0.1414,
+      "monetary": 0.0148,
+      "frequency": 0.0007
     },
     "features_used": [
       "recency",
@@ -49,6 +49,6 @@
       "avg_delivery_days"
     ]
   },
-  "timestamp": "2026-07-14T12:45:38.324384",
-  "duration_seconds": 113.9
+  "timestamp": "2026-07-14T13:50:32.532613",
+  "duration_seconds": 52.9
 }

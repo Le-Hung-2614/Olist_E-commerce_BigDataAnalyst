@@ -108,6 +108,8 @@ def create_spark_session():
         .config("spark.executor.heartbeatInterval", "60s")
         # Ép session timezone UTC - tránh lỗi pytz khi convert timestamp.
         .config("spark.sql.session.timeZone", "UTC")
+        # Cấu hình bỏ qua lỗi ép kiểu sai, tự động biến giá trị lỗi thành NULL thay vì dừng chương trình
+        .config("spark.sql.ansi.enabled", "false")
         .getOrCreate()
     )
     spark.sparkContext.setLogLevel("WARN")
