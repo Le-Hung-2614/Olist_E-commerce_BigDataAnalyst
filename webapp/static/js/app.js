@@ -256,6 +256,61 @@
       ChartTheme.createScatter('rfmScatter', datasets, 'Recency (ngày)', window.CURRENCY_MODE === 'VND' ? 'Tổng chi (VNĐ)' : 'Tổng chi (BRL)');
     }
 
+    // Revenue Doughnut
+    if (data.revenue_data && data.revenue_data.length) {
+      const order = ['Champions', 'Loyal', 'At Risk', 'Lost'];
+      data.revenue_data.sort((a, b) => {
+        let idxA = order.indexOf(a.segment);
+        let idxB = order.indexOf(b.segment);
+        if (idxA === -1) idxA = 99;
+        if (idxB === -1) idxB = 99;
+        return idxA - idxB;
+      });
+
+      ChartTheme.createDoughnut(
+        'revenueDoughnut',
+        data.revenue_data.map(d => translateSegment(d.segment || 'N/A')),
+        data.revenue_data.map(d => convertCur(d.revenue))
+      );
+    }
+
+    // RFM Radar Chart
+    if (data.radar_data && data.radar_data.length) {
+      const order = ['Champions', 'Loyal', 'At Risk', 'Lost'];
+      data.radar_data.sort((a, b) => {
+        let idxA = order.indexOf(a._id);
+        let idxB = order.indexOf(b._id);
+        if (idxA === -1) idxA = 99;
+        if (idxB === -1) idxB = 99;
+        return idxA - idxB;
+      });
+
+      // Normalize data for radar chart so they are on the same scale (0 to 1)
+      const maxR = Math.max(...data.radar_data.map(d => d.avg_recency));
+      const maxF = Math.max(...data.radar_data.map(d => d.avg_frequency));
+      const maxM = Math.max(...data.radar_data.map(d => d.avg_monetary));
+
+      const datasets = data.radar_data.map((d, i) => {
+        const segName = translateSegment(d._id || 'Unknown');
+        const color = ChartTheme.PALETTE[i % ChartTheme.PALETTE.length];
+        
+        // Invert Recency because lower recency is better (ensure at least 5% height)
+        const normR = Math.max(0.05, 1 - (d.avg_recency / maxR));
+        const normF = Math.max(0.05, d.avg_frequency / maxF);
+        const normM = Math.max(0.05, d.avg_monetary / maxM);
+        
+        return {
+          label: segName,
+          data: [normR, normF, normM],
+          backgroundColor: ChartTheme.withAlpha(color, 0.2),
+          borderColor: color,
+          borderWidth: 2,
+        };
+      });
+
+      ChartTheme.createGroupedBar('rfmRadarChart', ['Điểm Recency', 'Điểm Frequency', 'Điểm Monetary'], datasets);
+    }
+
     // Trend by Segment
     if (data.trend_data && data.trend_data.length) {
       // Group by segment
@@ -364,6 +419,15 @@
 
     // Churn by segment
     if (data.by_segment && data.by_segment.length) {
+      const order = ['Champions', 'Loyal', 'At Risk', 'Lost'];
+      data.by_segment.sort((a, b) => {
+        let idxA = order.indexOf(a.segment);
+        let idxB = order.indexOf(b.segment);
+        if (idxA === -1) idxA = 99;
+        if (idxB === -1) idxB = 99;
+        return idxA - idxB;
+      });
+
       ChartTheme.createBarChart(
         'churnBySegment',
         data.by_segment.map(d => translateSegment(d.segment)),
@@ -768,7 +832,6 @@
     }
 
     const clsModels = models.filter(m => !m.is_regression);
-    const regModels = models.filter(m => m.is_regression);
 
     // Metrics table (Classification)
     const tbody = document.getElementById('metricsBody');
@@ -786,41 +849,13 @@
       `).join('') || `<tr><td colspan="6" style="text-align:center">Không có dữ liệu</td></tr>`;
     }
 
-    // Regression table
-    const regBody = document.getElementById('regressionBody');
-    if (regBody) {
-      regBody.innerHTML = regModels.map(m => `
-        <tr>
-          <td style="color:var(--text-bright);font-weight:600">${m.name || '—'}</td>
-          <td>${m.rmse != null ? m.rmse.toFixed(4) : '—'}</td>
-          <td>${m.r2 != null ? m.r2.toFixed(4) : '—'}</td>
-          <td>${m.mae != null ? m.mae.toFixed(4) : '—'}</td>
-        </tr>
-      `).join('') || `<tr><td colspan="4" style="text-align:center">Không có dữ liệu</td></tr>`;
-    }
-
     // Prediction form
     const form = document.getElementById('predictForm');
     if (form) {
       form.addEventListener('submit', handlePredict);
     }
+
     
-    // Review Score Prediction form
-    const reviewForm = document.getElementById('predictReviewForm');
-    if (reviewForm) {
-      reviewForm.addEventListener('submit', handlePredictReview);
-    }
-
-    // Autofill Feature
-    const inpCustId = document.getElementById('inp_customer_id');
-    if (inpCustId) {
-      inpCustId.addEventListener('input', (e) => {
-        if (e.target.value.trim().length === 32) {
-          handleAutofillReview();
-        }
-      });
-    }
-
     const inpCustIdChurn = document.getElementById('inp_customer_id_churn');
     if (inpCustIdChurn) {
       inpCustIdChurn.addEventListener('input', (e) => {
@@ -854,82 +889,6 @@
       
     } catch (err) {
       alert(err.message || "Đã xảy ra lỗi khi tải dữ liệu");
-    }
-  }
-
-  async function handleAutofillReview() {
-    const custId = document.getElementById('inp_customer_id').value.trim();
-    if (!custId) {
-      alert("Vui lòng nhập Mã Khách Hàng (Customer Unique ID)");
-      return;
-    }
-    
-    try {
-      const res = await fetch('/api/customers/' + encodeURIComponent(custId) + '/latest_order');
-      const data = await res.json();
-      if (data.error) {
-        alert(data.error);
-        return;
-      }
-      
-      document.getElementById('inp_price').value = window.CURRENCY_MODE === 'VND' ? (data.price * VND_RATE).toFixed(0) : data.price.toFixed(2);
-      document.getElementById('inp_freight').value = window.CURRENCY_MODE === 'VND' ? (data.freight_value * VND_RATE).toFixed(0) : data.freight_value.toFixed(2);
-      document.getElementById('inp_delivery_rev').value = data.delivery_days;
-      document.getElementById('inp_item_count').value = data.item_count;
-      document.getElementById('inp_installments').value = data.installments;
-      
-    } catch (e) {
-      console.error(e);
-      alert("Có lỗi xảy ra khi lấy dữ liệu.");
-    }
-  }
-
-  async function handlePredictReview(e) {
-    e.preventDefault();
-    const form = e.target;
-    
-    // Reverse conversion if UI is in VND
-    let priceVal = parseFloat(form.price.value) || 0;
-    let freightVal = parseFloat(form.freight_value.value) || 0;
-    if (window.CURRENCY_MODE === 'VND') {
-      priceVal = priceVal / VND_RATE;
-      freightVal = freightVal / VND_RATE;
-    }
-
-    const body = {
-      price: priceVal,
-      freight_value: freightVal,
-      delivery_days: parseFloat(form.delivery_days.value),
-      item_count: parseFloat(form.item_count.value),
-      installments: parseFloat(form.installments.value)
-    };
-
-    const btn = form.querySelector('button');
-    const oriText = btn.innerHTML;
-    btn.innerHTML = '<span class="spinner"></span> Đang xử lý...';
-    btn.disabled = true;
-
-    try {
-      const res = await fetch('/api/predict_review', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      const data = await res.json();
-      const resDiv = document.getElementById('predictReviewResult');
-      resDiv.classList.remove('hidden');
-
-      if (data && data.predicted_score) {
-        document.getElementById('resultReviewLabel').textContent = data.predicted_score + ' ★';
-      } else {
-        document.getElementById('resultReviewLabel').textContent = 'Lỗi';
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Có lỗi xảy ra khi dự đoán.');
-    } finally {
-      btn.innerHTML = oriText;
-      btn.disabled = false;
     }
   }
 

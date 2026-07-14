@@ -392,151 +392,6 @@ def train_churn_prediction(merged_df, rfm_df, spark):
     return results
 
 
-# ==========================================================================
-# MO HINH 3: REVIEW SCORE PREDICTION (REGRESSION)
-# ==========================================================================
-def train_review_prediction(merged_df, spark):
-    """
-    Du doan diem review bang RandomForestRegressor + LinearRegression.
-    100% Spark MLlib (JVM).
-
-    Features: gia, phi ship, thoi gian giao hang, thanh toan, danh muc san pham
-    Label: avg_review_score
-    """
-    logger.info("=" * 60)
-    logger.info("MO HINH 3: REVIEW SCORE PREDICTION (REGRESSION)")
-    logger.info("=" * 60)
-
-    # --- Chon features ---
-    numeric_features = [
-        "total_price", "total_freight_value", "delivery_days",
-        "total_payment_value", "total_items", "freight_ratio",
-    ]
-    cat_feature = "main_category_english"
-    label_col = "avg_review_score"
-
-    # Lay du lieu, loai null
-    review_df = (
-        merged_df
-        .select(*numeric_features, cat_feature, label_col)
-        .na.drop(subset=[label_col])
-    )
-
-    # Fill null
-    fill_values = {col: 0.0 for col in numeric_features}
-    fill_values[cat_feature] = "unknown"
-    review_df = review_df.fillna(fill_values)
-
-    review_df = review_df.withColumn(
-        "label", F.col(label_col).cast("double")
-    ).filter(F.col("label").isNotNull())
-
-    data_count = review_df.count()
-    logger.info(f"  Du lieu: {data_count:,} dong")
-    logger.info(f"  Numeric features: {numeric_features}")
-    logger.info(f"  Categorical: {cat_feature}")
-
-    # --- Pipeline: StringIndexer -> VectorAssembler -> Model ---
-    indexer = StringIndexer(
-        inputCol=cat_feature, outputCol="category_index",
-        handleInvalid="keep"
-    )
-    all_feature_cols = numeric_features + ["category_index"]
-
-    assembler = VectorAssembler(
-        inputCols=all_feature_cols, outputCol="features",
-        handleInvalid="skip"
-    )
-
-    # --- Train/Test split ---
-    train_df, test_df = review_df.randomSplit([0.8, 0.2], seed=42)
-    logger.info(f"  Train: {train_df.count():,}, Test: {test_df.count():,}")
-
-    # --- Random Forest Regressor ---
-    rf = RandomForestRegressor(
-        featuresCol="features", labelCol="label",
-        numTrees=50, maxDepth=8, maxBins=80, seed=42
-    )
-    rf_pipeline = Pipeline(stages=[indexer, assembler, rf])
-
-    logger.info("  Dang huan luyen Random Forest Regressor...")
-    rf_model = rf_pipeline.fit(train_df)
-    rf_preds = rf_model.transform(test_df)
-
-    # --- Linear Regression ---
-    lr = SparkLinearRegression(
-        featuresCol="features", labelCol="label",
-        maxIter=100, regParam=0.01
-    )
-    lr_pipeline = Pipeline(stages=[indexer, assembler, lr])
-
-    logger.info("  Dang huan luyen Linear Regression...")
-    lr_model = lr_pipeline.fit(train_df)
-    lr_preds = lr_model.transform(test_df)
-
-    # --- Danh gia (Evaluator tra float qua Py4J) ---
-    rmse_eval = RegressionEvaluator(labelCol="label", metricName="rmse")
-    r2_eval = RegressionEvaluator(labelCol="label", metricName="r2")
-    mae_eval = RegressionEvaluator(labelCol="label", metricName="mae")
-
-    rf_metrics = {
-        "rmse": round(rmse_eval.evaluate(rf_preds), 4),
-        "r2": round(r2_eval.evaluate(rf_preds), 4),
-        "mae": round(mae_eval.evaluate(rf_preds), 4),
-    }
-    logger.info(
-        f"  RF  -> RMSE: {rf_metrics['rmse']}, "
-        f"R2: {rf_metrics['r2']}, MAE: {rf_metrics['mae']}"
-    )
-
-    lr_metrics = {
-        "rmse": round(rmse_eval.evaluate(lr_preds), 4),
-        "r2": round(r2_eval.evaluate(lr_preds), 4),
-        "mae": round(mae_eval.evaluate(lr_preds), 4),
-    }
-    logger.info(
-        f"  LR  -> RMSE: {lr_metrics['rmse']}, "
-        f"R2: {lr_metrics['r2']}, MAE: {lr_metrics['mae']}"
-    )
-
-    # --- Chon model tot nhat theo RMSE (thap hon = tot hon) ---
-    if rf_metrics["rmse"] <= lr_metrics["rmse"]:
-        best_name = "RandomForest"
-        best_model = rf_model
-    else:
-        best_name = "LinearRegression"
-        best_model = lr_model
-    logger.info(f"  -> Best model: {best_name}")
-
-    # --- Feature Importance (RF, qua Py4J) ---
-    rf_regressor = rf_model.stages[-1]  # RandomForestRegressionModel
-    importances = rf_regressor.featureImportances.toArray().tolist()
-    fi_dict = {}
-    for i, name in enumerate(all_feature_cols):
-        fi_dict[name] = round(importances[i], 4) if i < len(importances) else 0.0
-    fi_sorted = dict(sorted(fi_dict.items(), key=lambda x: x[1], reverse=True))
-
-    logger.info("  Feature Importance (RF):")
-    for feat, imp in fi_sorted.items():
-        logger.info(f"    {feat}: {imp:.4f}")
-
-    # --- Luu model ---
-    model_path = f"{HDFS_MODELS}/review_predictor"
-    best_model.write().overwrite().save(model_path)
-    logger.info(f"  Da luu model tai: {model_path}")
-
-    results = {
-        "model_name": "Review_Score_Prediction",
-        "best_model": best_name,
-        "models": {
-            "RandomForest": rf_metrics,
-            "LinearRegression": lr_metrics,
-        },
-        "feature_importance": fi_sorted,
-        "features_used": all_feature_cols,
-    }
-
-    return results
 
 
 # ==========================================================================
@@ -570,10 +425,7 @@ def run_all_models():
         logger.info("")
         churn_results = train_churn_prediction(merged_df, rfm_df, spark)
 
-        # ----- Model 3: Review Prediction -----
-        logger.info("")
-        review_results = train_review_prediction(merged_df, spark)
-
+        
         # Giai phong cache
         merged_df.unpersist()
         rfm_df.unpersist()
@@ -583,7 +435,6 @@ def run_all_models():
         all_results = {
             "kmeans_segmentation": kmeans_results,
             "churn_prediction": churn_results,
-            "review_prediction": review_results,
             "timestamp": start_time.isoformat(),
             "duration_seconds": round(elapsed, 1),
         }
@@ -610,14 +461,7 @@ def run_all_models():
             f"    AUC: {best_churn['auc_roc']}, "
             f"F1: {best_churn['f1_score']}"
         )
-        logger.info(
-            f"  Mo hinh 3: Review ({review_results['best_model']})"
-        )
-        best_review = review_results["models"][review_results["best_model"]]
-        logger.info(
-            f"    RMSE: {best_review['rmse']}, "
-            f"R2: {best_review['r2']}"
-        )
+
 
     except Exception as e:
         logger.error(f"LOI: {e}")

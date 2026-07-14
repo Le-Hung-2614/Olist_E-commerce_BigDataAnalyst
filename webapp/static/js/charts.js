@@ -11,6 +11,7 @@ const ChartTheme = (() => {
     green:   '#10b981',
     orange:  '#f59e0b',
     red:     '#ef4444',
+    lightRed:'#f87171',
     pink:    '#ec4899',
     indigo:  '#6366f1',
     teal:    '#14b8a6',
@@ -20,7 +21,7 @@ const ChartTheme = (() => {
   };
 
   const PALETTE = [
-    COLORS.purple, COLORS.cyan, COLORS.orange, COLORS.green,
+    COLORS.purple, COLORS.cyan, COLORS.orange, COLORS.lightRed,
     COLORS.blue, COLORS.pink, COLORS.indigo, COLORS.teal,
     COLORS.red, COLORS.amber, COLORS.lime, COLORS.rose
   ];
@@ -244,6 +245,35 @@ const ChartTheme = (() => {
           },
         },
       }),
+    }));
+  }
+
+  /**
+   * Stacked Bar Chart
+   */
+  function createStackedBarChart(canvasId, labels, datasets) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return null;
+
+    return registerChart(canvasId, new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets
+      },
+      options: deepMerge({}, DEFAULT_OPTIONS, {
+        plugins: {
+          legend: { display: true, position: 'bottom' },
+          tooltip: {
+            mode: 'index',
+            intersect: false
+          }
+        },
+        scales: {
+          x: { stacked: true },
+          y: { stacked: true, beginAtZero: true }
+        }
+      })
     }));
   }
 
@@ -533,7 +563,7 @@ const ChartTheme = (() => {
     COLORS, PALETTE, GRADIENTS,
     createLineChart, createMultiLineChart, createBarChart, createHorizontalBar,
     createDoughnut, createPie, createScatter, createRadar,
-    createGroupedBar,
+    createGroupedBar, createStackedBarChart,
     withAlpha, formatNumber, formatCompact,
   };
 })();

@@ -41,15 +41,6 @@ try:
 except Exception as e:
     logger.error(f"Failed to load churn model: {e}")
 
-REVIEW_MODEL = None
-try:
-    path_root = os.path.join("tmp_models", "review_prediction.joblib")
-    path_webapp = os.path.join("..", "tmp_models", "review_prediction.joblib")
-    model_path = path_root if os.path.exists(path_root) else path_webapp
-    if os.path.exists(model_path):
-        REVIEW_MODEL = joblib.load(model_path)
-except Exception as e:
-    logger.error(f"Failed to load review model: {e}")
 
 # -- Helpers --
 def _json(data):
@@ -243,43 +234,6 @@ def api_overview():
 # ====================================================================
 #  Run
 # ====================================================================
-@app.route("/api/predict_review", methods=["POST"])
-def predict_review():
-    if REVIEW_MODEL is None:
-        return jsonify({"error": "Review Score model is not loaded (file missing)"}), 500
-
-    try:
-        data = request.json
-        price = float(data.get("price", 100))
-        freight = float(data.get("freight_value", 20))
-        freight_ratio = freight / (price + freight) if (price + freight) > 0 else 0
-
-        # Features expected: ['delivery_days' 'freight_value' 'price' 'item_count' 'freight_ratio' 'estimated_vs_actual' 'installments' 'category' 'payment_type']
-        import pandas as pd
-        df = pd.DataFrame([{
-            "delivery_days": float(data.get("delivery_days", 10)),
-            "freight_value": freight,
-            "price": price,
-            "item_count": int(data.get("item_count", 1)),
-            "freight_ratio": freight_ratio,
-            "estimated_vs_actual": float(data.get("estimated_vs_actual", 2)),
-            "installments": int(data.get("installments", 1)),
-            "category": str(data.get("category", "health_beauty")),
-            "payment_type": str(data.get("payment_type", "credit_card")),
-        }])
-
-        pred = REVIEW_MODEL.predict(df)[0]
-        score = round(max(1.0, min(5.0, float(pred))), 1)
-
-        return jsonify({
-            "status": "success",
-            "predicted_score": score
-        })
-    except Exception as e:
-        logger.error(f"Prediction Error: {e}")
-        return jsonify({"error": str(e)}), 400
-
-
 @app.route("/api/revenue")
 def api_revenue():
     try:
@@ -419,16 +373,33 @@ def api_segments():
         trend_agg = list(customers_col.aggregate(trend_pipeline))
         trend_data = [{"month": r["_id"]["month"], "segment": r["_id"]["segment"], "count": r["count"]} for r in trend_agg]
 
+        revenue_pipeline = [
+            {"$match": {"segment_name": {"$exists": True, "$ne": "Unknown"}}},
+            {"$group": {"_id": "$segment_name", "revenue": {"$sum": "$monetary"}}}
+        ]
+        revenue_data = [{"segment": r["_id"], "revenue": r["revenue"]} for r in customers_col.aggregate(revenue_pipeline)]
+
+        radar_pipeline = [
+            {"$match": {"segment_name": {"$exists": True, "$ne": "Unknown"}}},
+            {"$group": {
+                "_id": "$segment_name",
+                "avg_recency": {"$avg": "$recency"},
+                "avg_frequency": {"$avg": "$frequency"},
+                "avg_monetary": {"$avg": "$monetary"}
+            }}
+        ]
+        radar_data = list(customers_col.aggregate(radar_pipeline))
+
         return jsonify({
             "distribution": _json(distribution),
             "rfm": _json(rfm_data),
             "top_customers": _json(top_customers),
-            "trend_data": trend_data
+            "trend_data": trend_data,
+            "revenue_data": _json(revenue_data),
+            "radar_data": _json(radar_data)
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
 # ====================================================================
 #  API - Churn Analysis
 # ====================================================================
