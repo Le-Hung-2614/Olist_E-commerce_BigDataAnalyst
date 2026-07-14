@@ -48,7 +48,7 @@ Hệ thống được thiết kế theo tiêu chuẩn Data Lake / Data Warehouse
 
 ---
 
-## ⚙️ Quy Trình Hoạt Động (Workflow)
+## Quy Trình Hoạt Động (Workflow)
 
 1. **Data Ingestion (Thu thập):** Apache Spark đọc hàng triệu bản ghi từ các file CSV.
 2. **Data Pipeline (Xử lý):** File `etl.py`, `export_to_mongo.py` chạy qua các pipeline làm sạch dữ liệu, tạo bảng kết hợp và lưu các báo cáo tổng hợp vào MongoDB.
@@ -57,7 +57,7 @@ Hệ thống được thiết kế theo tiêu chuẩn Data Lake / Data Warehouse
 
 ---
 
-## 🗄 Lược Đồ Dữ Liệu (Database Schema)
+## Lược Đồ Dữ Liệu (Database Schema)
 
 Dữ liệu gốc bao gồm 9 bảng (tables) quan hệ chính:
 - **`Customers`**: `customer_id`, `customer_unique_id`, `zip_code_prefix`, `city`, `state`.
@@ -73,7 +73,7 @@ Dữ liệu gốc bao gồm 9 bảng (tables) quan hệ chính:
 
 ---
 
-## 🛠 Yêu Cầu Cài Đặt (Prerequisites)
+## Yêu Cầu Cài Đặt (Prerequisites)
 
 Để chạy hệ thống này, máy tính của bạn cần cài đặt:
 1. **Python 3.10+**
@@ -102,20 +102,27 @@ $env:HADOOP_HOME = "C:\hadoop"
 ## 4. Kiểm tra HDFS đã chạy chưa
 & hdfs dfs -ls /
 
-## 5. Nếu thành công → chạy file tạo thư mục vào HDFS
-cd C:\olist-bigdata-project
-python spark_jobs/ingestion.py
+## 5. Nếu thành công thì tiếp tục chạy pipeline:
+### Có 2 cách:
+### Cách 1: chạy file run_all.py (file này sẽ chạy toàn bộ pipeline từ ingestion -> etl -> ml_models -> export_to_mongo)
+cd C:\olist-bigdata-project-nhom18
+python run_all.py
 
-## 7. Chạy ETL
+### Cách 2: Chạy thủ công từng file
+#### 1. Chạy Ingestion - nạp dữ liệu vào HDFS
+cd C:\olist-bigdata-project-nhom18
+python ingestion.py
+
+#### 2. Chạy ETL
 python spark_jobs/etl.py
 
-## 8. Chạy Model
+#### 3. Chạy Model
 python spark_jobs/ml_models.py
 
-## 9. Upload dữ liệu lên database MongoDB
+#### 4. Upload dữ liệu lên database MongoDB
 python spark_jobs/export_to_mongo.py
 
-## 10. Chạy Dashboard Web
+## 6. Chạy Dashboard Web
 Khởi động hệ thống Flask Backend:
 
 cd webapp

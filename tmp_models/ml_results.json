@@ -21,68 +21,34 @@
     "best_model": "GradientBoosting",
     "models": {
       "GradientBoosting": {
-        "auc_roc": 0.9999,
-        "accuracy": 0.9972,
-        "f1_score": 0.9946,
-        "precision": 0.9936,
-        "recall": 0.9955
+        "auc_roc": 0.9994,
+        "accuracy": 0.9847,
+        "f1_score": 0.9848,
+        "precision": 0.9843,
+        "recall": 0.984
       }
     },
     "confusion_matrix": {
-      "true_positive": 4837,
-      "true_negative": 13782,
-      "false_positive": 31,
-      "false_negative": 22
+      "true_positive": 6789,
+      "true_negative": 11510,
+      "false_positive": 218,
+      "false_negative": 67
     },
     "feature_importance": {
-      "recency": 0.5192,
-      "avg_review_score": 0.4524,
-      "avg_delivery_days": 0.0241,
-      "monetary": 0.0034,
-      "frequency": 0.0009
+      "recency": 0.4443,
+      "avg_review": 0.376,
+      "avg_delivery_days": 0.1648,
+      "monetary": 0.0147,
+      "frequency": 0.0003
     },
     "features_used": [
       "recency",
       "frequency",
       "monetary",
-      "avg_review_score",
+      "avg_review",
       "avg_delivery_days"
     ]
   },
-  "review_prediction": {
-    "model_name": "Review_Score_Prediction",
-    "best_model": "RandomForest",
-    "models": {
-      "RandomForest": {
-        "rmse": 1.1962,
-        "r2": 0.1669,
-        "mae": 0.9229
-      },
-      "LinearRegression": {
-        "rmse": 1.2216,
-        "r2": 0.1312,
-        "mae": 0.9446
-      }
-    },
-    "feature_importance": {
-      "delivery_days": 0.693,
-      "category_index": 0.1099,
-      "total_items": 0.0871,
-      "total_freight_value": 0.0544,
-      "freight_ratio": 0.0202,
-      "total_price": 0.0186,
-      "total_payment_value": 0.0167
-    },
-    "features_used": [
-      "total_price",
-      "total_freight_value",
-      "delivery_days",
-      "total_payment_value",
-      "total_items",
-      "freight_ratio",
-      "category_index"
-    ]
-  },
-  "timestamp": "2026-07-12T16:04:38.094369",
-  "duration_seconds": 129.1
+  "timestamp": "2026-07-14T12:45:38.324384",
+  "duration_seconds": 113.9
 }

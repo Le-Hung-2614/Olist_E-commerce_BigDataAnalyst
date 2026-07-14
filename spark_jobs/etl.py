@@ -111,6 +111,7 @@ def create_spark_session():
         .getOrCreate()
     )
     spark.sparkContext.setLogLevel("WARN")
+    spark.sparkContext.setLogLevel("ERROR")
     logger.info("SparkSession đã khởi tạo thành công.")
     return spark
 

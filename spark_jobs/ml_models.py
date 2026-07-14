@@ -96,6 +96,7 @@ def create_spark_session():
         .getOrCreate()
     )
     spark.sparkContext.setLogLevel("WARN")
+    spark.sparkContext.setLogLevel("ERROR")
     logger.info("SparkSession da khoi tao thanh cong.")
     return spark
 
