@@ -26,7 +26,7 @@ from datetime import datetime
 # ==========================================================================
 # Buoc PySpark dung Python 3.12 (Python 3.13 khong tuong thich)
 # ==========================================================================
-PYTHON_PATH = "C:/Users/Admin/AppData/Local/Programs/Python/Python312/python.exe"
+PYTHON_PATH = "/usr/bin/python3"
 os.environ["PYSPARK_PYTHON"] = PYTHON_PATH
 os.environ["PYSPARK_DRIVER_PYTHON"] = PYTHON_PATH
 
